@@ -14,6 +14,11 @@ import {
 export const PropertyInspector: React.FC = () => {
   const { selectedId, elements, updateElement } = useEditorStore();
   const element = elements.find((el) => el.id === selectedId);
+  const [expandedSections, setExpandedSections] = React.useState<string[]>([
+    "Size & Position",
+    "Typography",
+    "Fill & Stroke",
+  ]);
 
   if (!element) {
     return (
@@ -30,6 +35,12 @@ export const PropertyInspector: React.FC = () => {
 
   const handlePropChange = (key: string, value: any) => {
     updateElement(element.id, { [key]: value });
+  };
+
+  const toggleSection = (title: string) => {
+    setExpandedSections((prev) =>
+      prev.includes(title) ? prev.filter((s) => s !== title) : [...prev, title],
+    );
   };
 
   return (
@@ -54,40 +65,50 @@ export const PropertyInspector: React.FC = () => {
       </div>
 
       {/* Geometry Section */}
-      <Section title="Size & Position" icon={<Move size={12} />}>
+      <Section
+        title="Size & Position"
+        icon={<Move size={12} />}
+        isExpanded={expandedSections.includes("Size & Position")}
+        onToggle={() => toggleSection("Size & Position")}
+      >
         <div className="grid grid-cols-2 gap-x-3 gap-y-3">
           <Control
             label="X"
             value={element.props.x}
-            onChange={(v) => handlePropChange("x", parseInt(v))}
+            onChange={(v) => handlePropChange("x", v)}
           />
           <Control
             label="Y"
             value={element.props.y}
-            onChange={(v) => handlePropChange("y", parseInt(v))}
+            onChange={(v) => handlePropChange("y", v)}
           />
           <Control
             label="W"
             value={element.props.width}
-            onChange={(v) => handlePropChange("width", parseInt(v))}
+            onChange={(v) => handlePropChange("width", v)}
           />
           <Control
             label="H"
             value={element.props.height}
-            onChange={(v) => handlePropChange("height", parseInt(v))}
+            onChange={(v) => handlePropChange("height", v)}
           />
         </div>
       </Section>
 
       {/* Text Properties */}
       {element.type === "text" && (
-        <Section title="Typography" icon={<Type size={12} />}>
+        <Section
+          title="Typography"
+          icon={<Type size={12} />}
+          isExpanded={expandedSections.includes("Typography")}
+          onToggle={() => toggleSection("Typography")}
+        >
           <div className="space-y-4">
             <div>
               <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-2">
                 Font Family
               </label>
-              <select className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-[12px] text-text-main focus:ring-1 focus:ring-primary outline-none transition-all">
+              <select className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-[12px] text-text-main focus:border-primary outline-none transition-all">
                 <option>Inter</option>
                 <option>JetBrains Mono</option>
               </select>
@@ -96,9 +117,9 @@ export const PropertyInspector: React.FC = () => {
               <Control
                 label="Size"
                 value={element.props.fontSize || 16}
-                onChange={(v) => handlePropChange("fontSize", parseInt(v))}
+                onChange={(v) => handlePropChange("fontSize", v)}
               />
-              <Control label="Weight" value="Regular" />
+              <Control label="Weight" value="Regular" readOnly />
             </div>
             <div className="flex items-center justify-between p-0.5 bg-background border border-border rounded-lg">
               <IconButton icon={<AlignLeft size={14} />} active />
@@ -111,7 +132,12 @@ export const PropertyInspector: React.FC = () => {
       )}
 
       {/* Style Section */}
-      <Section title="Fill & Stroke" icon={<Palette size={12} />}>
+      <Section
+        title="Fill & Stroke"
+        icon={<Palette size={12} />}
+        isExpanded={expandedSections.includes("Fill & Stroke")}
+        onToggle={() => toggleSection("Fill & Stroke")}
+      >
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3 group">
             <div className="flex items-center gap-2 flex-1">
@@ -126,7 +152,7 @@ export const PropertyInspector: React.FC = () => {
                   onChange={(e) =>
                     handlePropChange("background", e.target.value)
                   }
-                  className="bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 uppercase"
+                  className="bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 outline-none uppercase"
                 />
                 <span className="text-[10px] text-text-muted font-bold uppercase">
                   Background Color
@@ -142,12 +168,12 @@ export const PropertyInspector: React.FC = () => {
             <Control
               label="Radius"
               value={element.props.borderRadius || 0}
-              onChange={(v) => handlePropChange("borderRadius", parseInt(v))}
+              onChange={(v) => handlePropChange("borderRadius", v)}
             />
             <Control
               label="Z Index"
               value={element.props.zIndex || 1}
-              onChange={(v) => handlePropChange("zIndex", parseInt(v))}
+              onChange={(v) => handlePropChange("zIndex", v)}
             />
           </div>
         </div>
@@ -160,9 +186,14 @@ const Section: React.FC<{
   title: string;
   children: React.ReactNode;
   icon: React.ReactNode;
-}> = ({ title, children, icon }) => (
+  isExpanded: boolean;
+  onToggle: () => void;
+}> = ({ title, children, icon, isExpanded, onToggle }) => (
   <div className="bg-surface border-b border-border shadow-sm">
-    <div className="px-4 py-3 flex items-center justify-between group cursor-pointer hover:bg-background/20 transition-colors">
+    <div
+      onClick={onToggle}
+      className="px-4 py-3 flex items-center justify-between group cursor-pointer hover:bg-background/20 transition-colors"
+    >
       <div className="flex items-center gap-2">
         <span className="text-text-muted group-hover:text-text-main transition-colors">
           {icon}
@@ -173,10 +204,16 @@ const Section: React.FC<{
       </div>
       <ChevronDown
         size={12}
-        className="text-text-muted group-hover:text-text-main transition-all transform group-hover:translate-y-0.5"
+        className={`text-text-muted group-hover:text-text-main transition-all transform ${
+          isExpanded ? "rotate-0" : "-rotate-90"
+        }`}
       />
     </div>
-    <div className="px-4 pb-5 pt-1">{children}</div>
+    {isExpanded && (
+      <div className="px-4 pb-5 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+        {children}
+      </div>
+    )}
   </div>
 );
 
@@ -184,23 +221,44 @@ const Control = ({
   label,
   value,
   onChange,
+  readOnly,
 }: {
   label: string;
   value: any;
-  onChange?: (v: string) => void;
-}) => (
-  <div className="flex items-center gap-2 bg-background/50 border border-border/50 rounded-lg px-2 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all group">
-    <span className="text-[10px] font-bold text-text-muted tracking-tight w-4 group-hover:text-text-main">
-      {label}
-    </span>
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange?.(e.target.value)}
-      className="w-full bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 text-right"
-    />
-  </div>
-);
+  onChange?: (v: number) => void;
+  readOnly?: boolean;
+}) => {
+  const handleWheel = (e: React.WheelEvent) => {
+    if (readOnly || !onChange) return;
+    const delta = e.deltaY < 0 ? 1 : -1;
+    onChange(Number(value) + delta);
+  };
+
+  return (
+    <div className="flex items-center gap-2 bg-background/50 border border-border/50 rounded-lg px-2 py-1.5 focus-within:border-primary focus-within:ring-0 transition-all group relative">
+      <span className="text-[10px] font-bold text-text-muted tracking-tight w-4 group-hover:text-text-main shrink-0">
+        {label}
+      </span>
+      <input
+        type={typeof value === "number" ? "number" : "text"}
+        value={value}
+        readOnly={readOnly}
+        onWheel={handleWheel}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (typeof value === "number") {
+            onChange?.(val === "" ? 0 : Number(val));
+          }
+        }}
+        className={`
+          w-full bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 outline-none text-right
+          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+          ${readOnly ? "cursor-default opacity-50" : "cursor-ns-resize"}
+        `}
+      />
+    </div>
+  );
+};
 
 const IconButton = ({
   icon,
