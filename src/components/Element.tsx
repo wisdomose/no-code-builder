@@ -12,6 +12,7 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
+    useEditorStore.getState().saveHistory(); // Snapshot before drag starts
     setSelectedId(element.id);
 
     const startX = e.clientX;
@@ -119,6 +120,7 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
                 key={dir}
                 onMouseDown={(e) => {
                   e.stopPropagation();
+                  useEditorStore.getState().saveHistory(); // Snapshot before resize starts
                   const startX = e.clientX;
                   const startY = e.clientY;
                   const startW = element.props.width;

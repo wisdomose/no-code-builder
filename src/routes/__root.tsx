@@ -37,6 +37,8 @@ import {
   MousePointer2,
   Type,
   Box,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ResizeHandle } from "@/components/ResizeHandle";
@@ -101,16 +103,35 @@ function RootDocument() {
             </div>
 
             {/* Quick Tools */}
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-muted/20 border border-border rounded-lg p-0.5 shadow-sm">
-              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
-                <MousePointer2 size={14} />
-              </button>
-              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
-                <Type size={14} />
-              </button>
-              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
-                <Box size={14} />
-              </button>
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              <div className="flex items-center bg-muted/20 border border-border rounded-lg p-0.5 shadow-sm">
+                <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                  <MousePointer2 size={14} />
+                </button>
+                <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                  <Type size={14} />
+                </button>
+                <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                  <Box size={14} />
+                </button>
+              </div>
+
+              <div className="flex items-center bg-muted/20 border border-border rounded-lg p-0.5 shadow-sm">
+                <button
+                  onClick={() => useEditorStore.getState().undo()}
+                  className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground"
+                  title="Undo (Ctrl+Z)"
+                >
+                  <Undo2 size={14} />
+                </button>
+                <button
+                  onClick={() => useEditorStore.getState().redo()}
+                  className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground"
+                  title="Redo (Ctrl+Y)"
+                >
+                  <Redo2 size={14} />
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">

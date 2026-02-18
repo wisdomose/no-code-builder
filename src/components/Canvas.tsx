@@ -131,6 +131,22 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
                 .elements.find((el) => el.id === selectedId)!.props.x + 1,
           });
           break;
+        case "z":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              useEditorStore.getState().redo();
+            } else {
+              useEditorStore.getState().undo();
+            }
+          }
+          break;
+        case "y":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            useEditorStore.getState().redo();
+          }
+          break;
       }
     };
 

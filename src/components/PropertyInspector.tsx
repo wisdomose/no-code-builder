@@ -37,6 +37,10 @@ const Input = ({
 }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...rest}
+    onFocus={(e) => {
+      useEditorStore.getState().saveHistory();
+      rest.onFocus?.(e);
+    }}
     className={`w-full bg-muted/40 border-none rounded-[3px] px-1.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-[#007aff] transition-shadow ${className}`}
   />
 );

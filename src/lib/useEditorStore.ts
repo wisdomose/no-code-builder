@@ -39,6 +39,11 @@ interface LayoutState {
     isRightCollapsed: boolean
 }
 
+interface HistoryState {
+    past: { elements: EditorElement[]; artboard: ArtboardState }[]
+    future: { elements: EditorElement[]; artboard: ArtboardState }[]
+}
+
 interface EditorState {
     // Elements
     elements: EditorElement[]
@@ -53,11 +58,18 @@ interface EditorState {
     // Layout (Chrome)
     layout: LayoutState
 
+    // History
+    history: HistoryState
+
     // Actions
     addElement: (element: EditorElement) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
     removeElement: (id: string) => void
     setSelectedId: (id: string | null) => void
+
+    saveHistory: () => void
+    undo: () => void
+    redo: () => void
 
     setCamera: (camera: Partial<CameraState>) => void
     setArtboard: (artboard: Partial<ArtboardState>) => void
@@ -68,160 +80,120 @@ interface EditorState {
     toggleRightCollapse: () => void
 }
 
+const MAX_HISTORY = 100
+
 export const useEditorStore = create<EditorState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             elements: [
-                // Card 1: Revenue Recovery Dashboard (Hero)
-                {
-                    id: 'card-1',
-                    type: 'container',
-                    props: { x: 120, y: 188, width: 588, height: 524, background: '#ffffff', borderRadius: 24 }
-                },
-                {
-                    id: 'card-1-title',
-                    type: 'text',
-                    parentId: 'card-1',
-                    props: { x: 152, y: 220, width: 524, height: 32, text: 'Revenue Recovery Dashboard', color: '#111827', fontSize: 20 }
-                },
-                {
-                    id: 'card-1-desc',
-                    type: 'text',
-                    parentId: 'card-1',
-                    props: { x: 152, y: 252, width: 524, height: 48, text: 'Track every dollar saved with our automated recovery workflows.', color: '#6b7280', fontSize: 14 }
-                },
-                {
-                    id: 'card-1-amount',
-                    type: 'text',
-                    parentId: 'card-1',
-                    props: { x: 152, y: 316, width: 300, height: 64, text: '$142,580', color: '#10b981', fontSize: 48 }
-                },
-
-                // Card 2: AI Support Automation (Wide)
-                {
-                    id: 'card-2',
-                    type: 'container',
-                    props: { x: 732, y: 188, width: 588, height: 250, background: '#ffffff', borderRadius: 24 }
-                },
-                {
-                    id: 'card-2-title',
-                    type: 'text',
-                    parentId: 'card-2',
-                    props: { x: 764, y: 220, width: 400, height: 32, text: 'Automate 90% of Support', color: '#111827', fontSize: 20 }
-                },
-                {
-                    id: 'card-2-chat-1',
-                    type: 'container',
-                    parentId: 'card-2',
-                    props: { x: 920, y: 260, width: 360, height: 40, background: '#4f46e5', borderRadius: 12 }
-                },
-                {
-                    id: 'card-2-chat-1-text',
-                    type: 'text',
-                    parentId: 'card-2-chat-1',
-                    props: { x: 920, y: 260, width: 360, height: 40, text: 'Hi! I noticed your payment failed.', color: '#ffffff', fontSize: 12 }
-                },
-                {
-                    id: 'card-2-chat-2',
-                    type: 'container',
-                    parentId: 'card-2',
-                    props: { x: 800, y: 310, width: 360, height: 40, background: '#f3f4f6', borderRadius: 12 }
-                },
-                {
-                    id: 'card-2-chat-2-text',
-                    type: 'text',
-                    parentId: 'card-2-chat-2',
-                    props: { x: 800, y: 310, width: 360, height: 40, text: 'Yes please, that would be great!', color: '#1f2937', fontSize: 12 }
-                },
-
-                // Card 3: Integrations (Square)
-                {
-                    id: 'card-3',
-                    type: 'container',
-                    props: { x: 732, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 }
-                },
-                {
-                    id: 'card-3-title',
-                    type: 'text',
-                    parentId: 'card-3',
-                    props: { x: 748, y: 494, width: 250, height: 32, text: 'Plays well with others', color: '#111827', fontSize: 16 }
-                },
-
-                // Card 4: Speed Metric (Square)
-                {
-                    id: 'card-4',
-                    type: 'container',
-                    props: { x: 1038, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 }
-                },
-                {
-                    id: 'card-4-title',
-                    type: 'text',
-                    parentId: 'card-4',
-                    props: { x: 1054, y: 494, width: 250, height: 32, text: 'Sub-second Response', color: '#111827', fontSize: 16 }
-                },
-                {
-                    id: 'card-4-metric',
-                    type: 'text',
-                    parentId: 'card-4',
-                    props: { x: 1054, y: 550, width: 250, height: 80, text: '0.8s', color: '#4f46e5', fontSize: 64 }
-                },
-                {
-                    id: 'card-4-pulse-dot',
-                    type: 'div',
-                    parentId: 'card-4',
-                    props: { x: 1054, y: 640, width: 10, height: 10, background: '#10b981', borderRadius: 5 }
-                },
-                {
-                    id: 'card-4-pulse-text',
-                    type: 'text',
-                    parentId: 'card-4',
-                    props: { x: 1070, y: 640, width: 100, height: 16, text: 'LIVE STATUS', color: '#059669', fontSize: 12 }
-                }
+                // Populated with parent-child relationships for Bento Grid
+                { id: 'card-1', type: 'container', props: { x: 120, y: 188, width: 588, height: 524, background: '#ffffff', borderRadius: 24 } },
+                { id: 'card-1-title', type: 'text', parentId: 'card-1', props: { x: 152, y: 220, width: 524, height: 32, text: 'Revenue Recovery Dashboard', color: '#111827', fontSize: 20 } },
+                { id: 'card-1-desc', type: 'text', parentId: 'card-1', props: { x: 152, y: 252, width: 524, height: 48, text: 'Track every dollar saved with our automated recovery workflows.', color: '#6b7280', fontSize: 14 } },
+                { id: 'card-1-amount', type: 'text', parentId: 'card-1', props: { x: 152, y: 316, width: 300, height: 64, text: '$142,580', color: '#10b981', fontSize: 48 } },
+                { id: 'card-2', type: 'container', props: { x: 732, y: 188, width: 588, height: 250, background: '#ffffff', borderRadius: 24 } },
+                { id: 'card-2-title', type: 'text', parentId: 'card-2', props: { x: 764, y: 220, width: 400, height: 32, text: 'Automate 90% of Support', color: '#111827', fontSize: 20 } },
+                { id: 'card-2-chat-1', type: 'container', parentId: 'card-2', props: { x: 920, y: 260, width: 360, height: 40, background: '#4f46e5', borderRadius: 12 } },
+                { id: 'card-2-chat-1-text', type: 'text', parentId: 'card-2-chat-1', props: { x: 920, y: 260, width: 360, height: 40, text: 'Hi! I noticed your payment failed.', color: '#ffffff', fontSize: 12 } },
+                { id: 'card-2-chat-2', type: 'container', parentId: 'card-2', props: { x: 800, y: 310, width: 360, height: 40, background: '#f3f4f6', borderRadius: 12 } },
+                { id: 'card-2-chat-2-text', type: 'text', parentId: 'card-2-chat-2', props: { x: 800, y: 310, width: 360, height: 40, text: 'Yes please, that would be great!', color: '#1f2937', fontSize: 12 } },
+                { id: 'card-3', type: 'container', props: { x: 732, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 } },
+                { id: 'card-3-title', type: 'text', parentId: 'card-3', props: { x: 748, y: 494, width: 250, height: 32, text: 'Plays well with others', color: '#111827', fontSize: 16 } },
+                { id: 'card-4', type: 'container', props: { x: 1038, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 } },
+                { id: 'card-4-title', type: 'text', parentId: 'card-4', props: { x: 1054, y: 494, width: 250, height: 32, text: 'Sub-second Response', color: '#111827', fontSize: 16 } },
+                { id: 'card-4-metric', type: 'text', parentId: 'card-4', props: { x: 1054, y: 550, width: 250, height: 80, text: '0.8s', color: '#4f46e5', fontSize: 64 } },
+                { id: 'card-4-pulse-dot', type: 'div', parentId: 'card-4', props: { x: 1054, y: 640, width: 10, height: 10, background: '#10b981', borderRadius: 5 } },
+                { id: 'card-4-pulse-text', type: 'text', parentId: 'card-4', props: { x: 1070, y: 640, width: 100, height: 16, text: 'LIVE STATUS', color: '#059669', fontSize: 12 } }
             ],
             selectedId: null,
 
-            camera: {
-                scale: 1,
-                x: 0,
-                y: 0,
+            camera: { scale: 1, x: 0, y: 0 },
+            artboard: { width: 1440, height: 900, background: '#f9fafb' },
+            layout: { leftWidth: 240, rightWidth: 280, isLeftCollapsed: false, isRightCollapsed: false },
+            history: { past: [], future: [] },
+
+            // Helper to push state to history
+            saveHistory: () => {
+                const { elements, artboard, history } = get()
+                const newPast = [...history.past, { elements: JSON.parse(JSON.stringify(elements)), artboard: { ...artboard } }]
+                if (newPast.length > MAX_HISTORY) newPast.shift()
+                set({ history: { past: newPast, future: [] } })
             },
 
-            artboard: {
-                width: 1440,
-                height: 900,
-                background: '#f9fafb',
+            addElement: (element) => {
+                get().saveHistory()
+                set((state) => ({ elements: [...state.elements, element] }))
             },
 
-            layout: {
-                leftWidth: 240,
-                rightWidth: 280,
-                isLeftCollapsed: false,
-                isRightCollapsed: false,
-            },
-
-            addElement: (element) =>
-                set((state) => ({ elements: [...state.elements, element] })),
-
-            updateElement: (id, props) =>
+            updateElement: (id, props) => {
                 set((state) => ({
                     elements: state.elements.map((el) =>
                         el.id === id ? { ...el, props: { ...el.props, ...props } } : el
                     ),
-                })),
+                }))
+            },
 
-            removeElement: (id) =>
+            removeElement: (id) => {
+                get().saveHistory()
                 set((state) => ({
                     elements: state.elements.filter((el) => el.id !== id),
                     selectedId: state.selectedId === id ? null : state.selectedId,
-                })),
+                }))
+            },
 
             setSelectedId: (id) => set({ selectedId: id }),
+
+            undo: () => {
+                const { past, future } = get().history
+                if (past.length === 0) return
+
+                const previous = past[past.length - 1]
+                const newPast = past.slice(0, past.length - 1)
+
+                const current = {
+                    elements: JSON.parse(JSON.stringify(get().elements)),
+                    artboard: { ...get().artboard }
+                }
+
+                set({
+                    elements: previous.elements,
+                    artboard: previous.artboard,
+                    history: {
+                        past: newPast,
+                        future: [current, ...future].slice(0, MAX_HISTORY)
+                    }
+                })
+            },
+
+            redo: () => {
+                const { past, future } = get().history
+                if (future.length === 0) return
+
+                const next = future[0]
+                const newFuture = future.slice(1)
+
+                const current = {
+                    elements: JSON.parse(JSON.stringify(get().elements)),
+                    artboard: { ...get().artboard }
+                }
+
+                set({
+                    elements: next.elements,
+                    artboard: next.artboard,
+                    history: {
+                        past: [...past, current].slice(-MAX_HISTORY),
+                        future: newFuture
+                    }
+                })
+            },
 
             setCamera: (camera) =>
                 set((state) => ({ camera: { ...state.camera, ...camera } })),
 
-            setArtboard: (artboard) =>
-                set((state) => ({ artboard: { ...state.artboard, ...artboard } })),
+            setArtboard: (artboard) => {
+                get().saveHistory()
+                set((state) => ({ artboard: { ...state.artboard, ...artboard } }))
+            },
 
             setLeftWidth: (width) =>
                 set((state) => ({ layout: { ...state.layout, leftWidth: width } })),
@@ -241,7 +213,7 @@ export const useEditorStore = create<EditorState>()(
         }),
         {
             name: 'editor-storage',
-            version: 1, // Bumping version to clear old state without parentId
+            version: 2, // Bumped for history state schema change
         }
     )
 )
