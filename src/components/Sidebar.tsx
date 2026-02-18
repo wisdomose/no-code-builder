@@ -28,29 +28,38 @@ export const Sidebar: React.FC<SidebarProps> = ({
       `}
       style={{ width: isCollapsed ? "48px" : `${width}px` }}
     >
-      <div className="h-9 border-b border-border flex items-center justify-between px-2 shrink-0 bg-muted/30">
-        {!isCollapsed && (
-          <div className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground truncate">
-            <span className="text-foreground/70">{icon}</span>
-            <span>{title}</span>
-          </div>
-        )}
-        <button
-          onClick={onToggleCollapse}
-          className="p-1 hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors mx-auto"
-        >
-          {isCollapsed ? (
-            position === "left" ? (
+      <div className="h-9 border-b border-border flex items-center px-2 shrink-0 bg-muted/30">
+        {!isCollapsed ? (
+          <>
+            <div className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground truncate flex-1">
+              <span className="text-foreground/70">{icon}</span>
+              <span>{title}</span>
+            </div>
+            <button
+              onClick={onToggleCollapse}
+              className="p-1 hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors shrink-0"
+              title="Collapse"
+            >
+              {position === "left" ? (
+                <ChevronLeft size={14} />
+              ) : (
+                <ChevronRight size={14} />
+              )}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 w-full hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors flex items-center justify-center"
+            title="Expand"
+          >
+            {position === "left" ? (
               <ChevronRight size={14} />
             ) : (
               <ChevronLeft size={14} />
-            )
-          ) : position === "left" ? (
-            <ChevronLeft size={14} />
-          ) : (
-            <ChevronRight size={14} />
-          )}
-        </button>
+            )}
+          </button>
+        )}
       </div>
 
       <div

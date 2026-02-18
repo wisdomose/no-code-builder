@@ -64,6 +64,7 @@ interface EditorState {
     // Actions
     addElement: (element: EditorElement) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
+    updateElements: (updates: { id: string; props: Partial<EditorElement['props']> }[]) => void
     removeElement: (id: string) => void
     setSelectedId: (id: string | null) => void
 
@@ -133,6 +134,15 @@ export const useEditorStore = create<EditorState>()(
                 }))
             },
 
+            updateElements: (updates) => {
+                set((state) => ({
+                    elements: state.elements.map((el) => {
+                        const update = updates.find((u) => u.id === el.id)
+                        return update ? { ...el, props: { ...el.props, ...update.props } } : el
+                    }),
+                }))
+            },
+
             removeElement: (id) => {
                 get().saveHistory()
                 set((state) => ({
@@ -196,10 +206,20 @@ export const useEditorStore = create<EditorState>()(
             },
 
             setLeftWidth: (width) =>
-                set((state) => ({ layout: { ...state.layout, leftWidth: width } })),
+                set((state) => ({
+                    layout: {
+                        ...state.layout,
+                        leftWidth: Math.min(420, Math.max(180, width))
+                    }
+                })),
 
             setRightWidth: (width) =>
-                set((state) => ({ layout: { ...state.layout, rightWidth: width } })),
+                set((state) => ({
+                    layout: {
+                        ...state.layout,
+                        rightWidth: Math.min(480, Math.max(240, width))
+                    }
+                })),
 
             toggleLeftCollapse: () =>
                 set((state) => ({

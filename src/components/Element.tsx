@@ -7,28 +7,57 @@ interface ElementProps {
 }
 
 export const Element: React.FC<ElementProps> = ({ element }) => {
-  const { selectedId, setSelectedId, updateElement, camera } = useEditorStore();
+  const { selectedId, setSelectedId, camera } = useEditorStore();
   const isSelected = selectedId === element.id;
+
+  const getAllChildren = (
+    allElements: IEditorElement[],
+    parentId: string,
+  ): IEditorElement[] => {
+    const children = allElements.filter((el) => el.parentId === parentId);
+    return children.concat(
+      children.flatMap((child) => getAllChildren(allElements, child.id)),
+    );
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    useEditorStore.getState().saveHistory(); // Snapshot before drag starts
+
+    // Always get the LATEST state before starting
+    const store = useEditorStore.getState();
+    store.saveHistory();
     setSelectedId(element.id);
 
     const startX = e.clientX;
     const startY = e.clientY;
-    const startElemX = element.props.x;
-    const startElemY = element.props.y;
+
+    // Capture absolute latest state for all affected elements
+    const currentElements = store.elements;
+    const affectedElements = [
+      element,
+      ...getAllChildren(currentElements, element.id),
+    ];
+    const startPositions = affectedElements.map((el) => ({
+      id: el.id,
+      x: el.props.x,
+      y: el.props.y,
+    }));
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      // Compensate for camera scale to maintain 1:1 movement
-      const deltaX = (moveEvent.clientX - startX) / camera.scale;
-      const deltaY = (moveEvent.clientY - startY) / camera.scale;
+      // Pull latest camera scale just in case it changed (zoom-while-drag)
+      const currentCamera = useEditorStore.getState().camera;
+      const deltaX = (moveEvent.clientX - startX) / currentCamera.scale;
+      const deltaY = (moveEvent.clientY - startY) / currentCamera.scale;
 
-      updateElement(element.id, {
-        x: Math.round(startElemX + deltaX),
-        y: Math.round(startElemY + deltaY),
-      });
+      const updates = startPositions.map((pos) => ({
+        id: pos.id,
+        props: {
+          x: Math.round(pos.x + deltaX),
+          y: Math.round(pos.y + deltaY),
+        },
+      }));
+
+      useEditorStore.getState().updateElements(updates);
     };
 
     const handleMouseUp = () => {
@@ -112,7 +141,7 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
           {/* Edge line handles for visual clarity */}
           <div className="absolute -inset-[1px] border border-[#007aff] pointer-events-none" />
 
-          {/* Resize Hubs - 6px squares */}
+          {/* Resize Hubs - Maintain constant visual size */}
           {["nw", "n", "ne", "w", "e", "sw", "s", "se"].map((dir) => {
             const isCorner = dir.length === 2;
             return (
@@ -120,7 +149,9 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
                 key={dir}
                 onMouseDown={(e) => {
                   e.stopPropagation();
-                  useEditorStore.getState().saveHistory(); // Snapshot before resize starts
+                  const store = useEditorStore.getState();
+                  store.saveHistory();
+
                   const startX = e.clientX;
                   const startY = e.clientY;
                   const startW = element.props.width;
@@ -129,8 +160,11 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
                   const startEY = element.props.y;
 
                   const handleResize = (moveEvent: MouseEvent) => {
-                    const dx = (moveEvent.clientX - startX) / camera.scale;
-                    const dy = (moveEvent.clientY - startY) / camera.scale;
+                    const currentCamera = useEditorStore.getState().camera;
+                    const dx =
+                      (moveEvent.clientX - startX) / currentCamera.scale;
+                    const dy =
+                      (moveEvent.clientY - startY) / currentCamera.scale;
 
                     const updates: Partial<IEditorElement["props"]> = {};
 
@@ -150,7 +184,9 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
                       updates.y = startEY + (startH - newH);
                     }
 
-                    updateElement(element.id, updates);
+                    useEditorStore
+                      .getState()
+                      .updateElement(element.id, updates);
                   };
 
                   const stopResize = () => {
@@ -161,14 +197,17 @@ export const Element: React.FC<ElementProps> = ({ element }) => {
                   window.addEventListener("mousemove", handleResize);
                   window.addEventListener("mouseup", stopResize);
                 }}
+                style={{
+                  transform: `translate(-50%, -50%) scale(${1 / camera.scale})`,
+                }}
                 className={`
                   absolute w-[6px] h-[6px] bg-white border border-[#007aff] z-[110]
-                  ${dir.includes("n") ? "-top-[3px]" : ""}
-                  ${dir.includes("s") ? "-bottom-[3px]" : ""}
-                  ${dir.includes("w") ? "-left-[3px]" : ""}
-                  ${dir.includes("e") ? "-right-[3px]" : ""}
-                  ${dir === "n" || dir === "s" ? "left-1/2 -translate-x-1/2" : ""}
-                  ${dir === "w" || dir === "e" ? "top-1/2 -translate-y-1/2" : ""}
+                  ${dir.includes("n") ? "top-0" : ""}
+                  ${dir.includes("s") ? "top-full" : ""}
+                  ${dir.includes("w") ? "left-0" : ""}
+                  ${dir.includes("e") ? "left-full" : ""}
+                  ${dir === "n" || dir === "s" ? "left-1/2" : ""}
+                  ${dir === "w" || dir === "e" ? "top-1/2" : ""}
                   ${dir === "nw" || dir === "se" ? "cursor-nwse-resize" : ""}
                   ${dir === "ne" || dir === "sw" ? "cursor-nesw-resize" : ""}
                   ${dir === "n" || dir === "s" ? "cursor-ns-resize" : ""}

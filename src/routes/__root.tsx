@@ -172,11 +172,11 @@ function RootDocument() {
                 <div className="absolute top-0 -right-0.5 bottom-0 z-[90]">
                   <ResizeHandle
                     position="right"
-                    onResize={(delta) =>
-                      setLeftWidth(
-                        Math.min(420, Math.max(180, leftWidth + delta)),
-                      )
-                    }
+                    onResize={(delta) => {
+                      const currentWidth =
+                        useEditorStore.getState().layout.leftWidth;
+                      setLeftWidth(currentWidth + delta);
+                    }}
                   />
                 </div>
               )}
@@ -195,11 +195,11 @@ function RootDocument() {
                 <div className="absolute top-0 -left-0.5 bottom-0 z-[90]">
                   <ResizeHandle
                     position="left"
-                    onResize={(delta) =>
-                      setRightWidth(
-                        Math.min(480, Math.max(240, rightWidth + delta)),
-                      )
-                    }
+                    onResize={(delta) => {
+                      const currentWidth =
+                        useEditorStore.getState().layout.rightWidth;
+                      setRightWidth(currentWidth + delta);
+                    }}
                   />
                 </div>
               )}
