@@ -81,16 +81,19 @@ export const useEditorStore = create<EditorState>()(
                 {
                     id: 'card-1-title',
                     type: 'text',
+                    parentId: 'card-1',
                     props: { x: 152, y: 220, width: 524, height: 32, text: 'Revenue Recovery Dashboard', color: '#111827', fontSize: 20 }
                 },
                 {
                     id: 'card-1-desc',
                     type: 'text',
+                    parentId: 'card-1',
                     props: { x: 152, y: 252, width: 524, height: 48, text: 'Track every dollar saved with our automated recovery workflows.', color: '#6b7280', fontSize: 14 }
                 },
                 {
                     id: 'card-1-amount',
                     type: 'text',
+                    parentId: 'card-1',
                     props: { x: 152, y: 316, width: 300, height: 64, text: '$142,580', color: '#10b981', fontSize: 48 }
                 },
 
@@ -103,26 +106,31 @@ export const useEditorStore = create<EditorState>()(
                 {
                     id: 'card-2-title',
                     type: 'text',
+                    parentId: 'card-2',
                     props: { x: 764, y: 220, width: 400, height: 32, text: 'Automate 90% of Support', color: '#111827', fontSize: 20 }
                 },
                 {
                     id: 'card-2-chat-1',
                     type: 'container',
+                    parentId: 'card-2',
                     props: { x: 920, y: 260, width: 360, height: 40, background: '#4f46e5', borderRadius: 12 }
                 },
                 {
                     id: 'card-2-chat-1-text',
                     type: 'text',
+                    parentId: 'card-2-chat-1',
                     props: { x: 920, y: 260, width: 360, height: 40, text: 'Hi! I noticed your payment failed.', color: '#ffffff', fontSize: 12 }
                 },
                 {
                     id: 'card-2-chat-2',
                     type: 'container',
+                    parentId: 'card-2',
                     props: { x: 800, y: 310, width: 360, height: 40, background: '#f3f4f6', borderRadius: 12 }
                 },
                 {
                     id: 'card-2-chat-2-text',
                     type: 'text',
+                    parentId: 'card-2-chat-2',
                     props: { x: 800, y: 310, width: 360, height: 40, text: 'Yes please, that would be great!', color: '#1f2937', fontSize: 12 }
                 },
 
@@ -135,6 +143,7 @@ export const useEditorStore = create<EditorState>()(
                 {
                     id: 'card-3-title',
                     type: 'text',
+                    parentId: 'card-3',
                     props: { x: 748, y: 494, width: 250, height: 32, text: 'Plays well with others', color: '#111827', fontSize: 16 }
                 },
 
@@ -147,21 +156,25 @@ export const useEditorStore = create<EditorState>()(
                 {
                     id: 'card-4-title',
                     type: 'text',
+                    parentId: 'card-4',
                     props: { x: 1054, y: 494, width: 250, height: 32, text: 'Sub-second Response', color: '#111827', fontSize: 16 }
                 },
                 {
                     id: 'card-4-metric',
                     type: 'text',
+                    parentId: 'card-4',
                     props: { x: 1054, y: 550, width: 250, height: 80, text: '0.8s', color: '#4f46e5', fontSize: 64 }
                 },
                 {
                     id: 'card-4-pulse-dot',
                     type: 'div',
+                    parentId: 'card-4',
                     props: { x: 1054, y: 640, width: 10, height: 10, background: '#10b981', borderRadius: 5 }
                 },
                 {
                     id: 'card-4-pulse-text',
                     type: 'text',
+                    parentId: 'card-4',
                     props: { x: 1070, y: 640, width: 100, height: 16, text: 'LIVE STATUS', color: '#059669', fontSize: 12 }
                 }
             ],
@@ -228,6 +241,7 @@ export const useEditorStore = create<EditorState>()(
         }),
         {
             name: 'editor-storage',
+            version: 1, // Bumping version to clear old state without parentId
         }
     )
 )

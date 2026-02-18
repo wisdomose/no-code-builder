@@ -1,16 +1,39 @@
-import React from "react";
-import { Type, Square, Box, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Type,
+  Square,
+  Box,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+} from "lucide-react";
 import { useEditorStore } from "@/lib/useEditorStore";
+import type { EditorElement } from "@/lib/useEditorStore";
 
 export const LayerTree: React.FC = () => {
   const { elements, selectedId, setSelectedId, removeElement, addElement } =
     useEditorStore();
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(
+    new Set(["card-1", "card-2", "card-3", "card-4"]),
+  );
+
+  const toggleExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newExpanded = new Set(expandedIds);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedIds(newExpanded);
+  };
 
   const handleAdd = (type: "text" | "button" | "container") => {
     const id = `${type}-${Math.random().toString(36).substr(2, 9)}`;
     const newElement = {
       id,
       type,
+      parentId: selectedId || undefined,
       props: {
         x: 100,
         y: 100,
@@ -32,6 +55,65 @@ export const LayerTree: React.FC = () => {
     addElement(newElement as any);
     setSelectedId(id);
   };
+
+  const renderElement = (element: EditorElement, level: number = 0) => {
+    const children = elements.filter((el) => el.parentId === element.id);
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedIds.has(element.id);
+
+    return (
+      <React.Fragment key={element.id}>
+        <div
+          onClick={() => setSelectedId(element.id)}
+          className={`
+            group flex items-center gap-2 px-2 py-1 cursor-default text-[11px]
+            ${selectedId === element.id ? "bg-[#007aff]/10 text-[#007aff] font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"}
+            transition-colors
+          `}
+          style={{ paddingLeft: `${8 + level * 12}px` }}
+        >
+          <div className="w-4 h-4 flex items-center justify-center shrink-0">
+            {hasChildren && (
+              <button
+                onClick={(e) => toggleExpand(element.id, e)}
+                className="p-0.5 hover:bg-black/5 rounded transition-transform"
+              >
+                {isExpanded ? (
+                  <ChevronDown size={10} />
+                ) : (
+                  <ChevronRight size={10} />
+                )}
+              </button>
+            )}
+          </div>
+          <div className="shrink-0 opacity-60">
+            {element.type === "text" && <Type size={12} />}
+            {element.type === "button" && <Box size={12} />}
+            {element.type === "container" && <Square size={12} />}
+          </div>
+          <span className="flex-1 truncate">
+            {element.props.text || element.id}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              removeElement(element.id);
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 hover:text-red-600 rounded transition-all"
+          >
+            <Trash2 size={10} />
+          </button>
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="contents">
+            {children.map((child) => renderElement(child, level + 1))}
+          </div>
+        )}
+      </React.Fragment>
+    );
+  };
+
+  const rootElements = elements.filter((el) => !el.parentId);
 
   return (
     <div className="flex flex-col h-full bg-card select-none">
@@ -70,32 +152,7 @@ export const LayerTree: React.FC = () => {
             No layers yet
           </div>
         ) : (
-          elements.map((el) => (
-            <div
-              key={el.id}
-              onClick={() => setSelectedId(el.id)}
-              className={`
-                group flex items-center gap-2 px-2 py-1 cursor-default text-[11px]
-                ${selectedId === el.id ? "bg-[#007aff]/10 text-[#007aff] font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"}
-              `}
-            >
-              <div className="shrink-0 opacity-60">
-                {el.type === "text" && <Type size={12} />}
-                {el.type === "button" && <Box size={12} />}
-                {el.type === "container" && <Square size={12} />}
-              </div>
-              <span className="flex-1 truncate">{el.props.text || el.id}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeElement(el.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 hover:text-red-600 rounded transition-all"
-              >
-                <Trash2 size={10} />
-              </button>
-            </div>
-          ))
+          rootElements.map((el) => renderElement(el))
         )}
       </div>
     </div>
