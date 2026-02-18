@@ -1,12 +1,12 @@
 import React, { useRef, useEffect, useCallback } from "react";
-import { useEditorStore } from "../lib/useEditorStore";
+import { useEditorStore } from "@/lib/useEditorStore";
 
 interface CanvasProps {
   children: React.ReactNode;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ children }) => {
-  const { canvas, setCanvas, setSelectedId } = useEditorStore();
+  const { camera, setCamera, setSelectedId } = useEditorStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
 
@@ -18,7 +18,7 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
         const scaleChange = delta > 0 ? 1.1 : 0.9;
         const newScale = Math.min(
           4,
-          Math.max(0.25, canvas.scale * scaleChange),
+          Math.max(0.25, camera.scale * scaleChange),
         );
 
         if (containerRef.current) {
@@ -26,30 +26,30 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
           const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
 
-          // Cursor-centered zoom math
-          const newTranslateX =
-            mouseX - (mouseX - canvas.translateX) * (newScale / canvas.scale);
-          const newTranslateY =
-            mouseY - (mouseY - canvas.translateY) * (newScale / canvas.scale);
+          // Mathematically perfect cursor-centered zoom
+          const newX = mouseX - (mouseX - camera.x) * (newScale / camera.scale);
+          const newY = mouseY - (mouseY - camera.y) * (newScale / camera.scale);
 
-          setCanvas({
+          setCamera({
             scale: newScale,
-            translateX: newTranslateX,
-            translateY: newTranslateY,
+            x: newX,
+            y: newY,
           });
         }
       } else {
         // Normal scroll panned
-        setCanvas({
-          translateX: canvas.translateX - e.deltaX,
-          translateY: canvas.translateY - e.deltaY,
+        e.preventDefault();
+        setCamera({
+          x: camera.x - e.deltaX,
+          y: camera.y - e.deltaY,
         });
       }
     },
-    [canvas, setCanvas],
+    [camera, setCamera],
   );
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Middle click or Space+Click (Shift key proxy for Space+Click)
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
       isPanning.current = true;
       document.body.style.cursor = "grabbing";
@@ -62,12 +62,12 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
     (e: MouseEvent) => {
       if (!isPanning.current) return;
 
-      setCanvas({
-        translateX: canvas.translateX + e.movementX,
-        translateY: canvas.translateY + e.movementY,
+      setCamera({
+        x: camera.x + e.movementX,
+        y: camera.y + e.movementY,
       });
     },
-    [canvas, setCanvas],
+    [camera, setCamera],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -80,7 +80,6 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
       const selectedId = useEditorStore.getState().selectedId;
       if (!selectedId) return;
 
-      // Don't trigger if user is typing in an input
       if (
         document.activeElement instanceof HTMLInputElement ||
         document.activeElement instanceof HTMLTextAreaElement
@@ -157,23 +156,30 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
     <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
-      className="w-full h-full bg-muted/30 relative overflow-hidden outline-none select-none"
+      className="w-full h-full bg-[#f0f0f0] relative overflow-hidden outline-none select-none"
+      style={{
+        backgroundImage: "radial-gradient(#d1d1d1 1px, transparent 0)",
+        backgroundSize: `${20 * camera.scale}px ${20 * camera.scale}px`,
+        backgroundPosition: `${camera.x}px ${camera.y}px`,
+        overscrollBehavior: "none",
+        touchAction: "none",
+      }}
     >
       <div
         style={{
-          transform: `translate(${canvas.translateX}px, ${canvas.translateY}px) scale(${canvas.scale})`,
+          transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
           transformOrigin: "0 0",
-          transition: isPanning.current ? "none" : "transform 0.1s ease-out",
+          transition: isPanning.current ? "none" : "transform 0.05s linear",
           willChange: "transform",
         }}
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
       >
-        {children}
+        <div className="pointer-events-auto">{children}</div>
       </div>
 
       {/* Zoom Indicator */}
-      <div className="absolute bottom-4 right-4 bg-background/80 backdrop-blur border rounded px-2 py-1 text-xs font-medium shadow-sm z-50">
-        {Math.round(canvas.scale * 100)}%
+      <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-md border border-border rounded shadow-md px-2 py-1 text-[10px] font-mono font-bold z-50 text-muted-foreground">
+        {Math.round(camera.scale * 100)}%
       </div>
     </div>
   );

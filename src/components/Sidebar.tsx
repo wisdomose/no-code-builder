@@ -23,43 +23,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div
       className={`
-        h-full bg-sidebar border-sidebar-border flex flex-col transition-[width] duration-300 ease-in-out
+        h-full bg-card border-border flex flex-col select-none
         ${position === "left" ? "border-r" : "border-l"}
       `}
       style={{ width: isCollapsed ? "48px" : `${width}px` }}
     >
-      <div className="h-12 border-b border-sidebar-border flex items-center justify-between px-3 shrink-0">
+      <div className="h-9 border-b border-border flex items-center justify-between px-2 shrink-0 bg-muted/30">
         {!isCollapsed && (
-          <div className="flex items-center gap-2 font-semibold truncate text-sidebar-foreground">
-            {icon}
+          <div className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground truncate">
+            <span className="text-foreground/70">{icon}</span>
             <span>{title}</span>
           </div>
         )}
         <button
           onClick={onToggleCollapse}
-          className="p-1.5 hover:bg-sidebar-accent rounded-md text-sidebar-foreground transition-colors mx-auto"
+          className="p-1 hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors mx-auto"
         >
           {isCollapsed ? (
             position === "left" ? (
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             ) : (
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             )
           ) : position === "left" ? (
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} />
           ) : (
-            <ChevronRight size={16} />
+            <ChevronRight size={14} />
           )}
         </button>
       </div>
+
       <div
         className={`flex-1 overflow-auto ${isCollapsed ? "hidden" : "block"}`}
       >
         {children}
       </div>
+
       {isCollapsed && (
-        <div className="flex-1 flex flex-col items-center pt-4 gap-4">
-          <div className="text-sidebar-foreground/60">{icon}</div>
+        <div className="flex-1 flex flex-col items-center pt-4 gap-4 text-muted-foreground opacity-50">
+          {icon}
         </div>
       )}
     </div>

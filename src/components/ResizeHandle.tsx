@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 
 interface ResizeHandleProps {
   onResize: (delta: number) => void;
@@ -12,13 +12,19 @@ export const ResizeHandle: React.FC<ResizeHandleProps> = ({
   const isResizing = useRef(false);
   const lastX = useRef(0);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isResizing.current = true;
+    lastX.current = e.clientX;
+    document.body.style.cursor = "col-resize";
 
-      const delta = e.clientX - lastX.current;
-      lastX.current = e.clientX;
-      onResize(position === "left" ? delta : -delta);
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isResizing.current) return;
+      const delta = moveEvent.clientX - lastX.current;
+      lastX.current = moveEvent.clientX;
+      // For left sidebar: moving right (positive delta) increases width.
+      // For right sidebar: moving right (positive delta) decreases width.
+      // So if position is right, delta is positive. If left, it's negative.
+      onResize(position === "right" ? delta : -delta);
     };
 
     const handleMouseUp = () => {
@@ -28,49 +34,19 @@ export const ResizeHandle: React.FC<ResizeHandleProps> = ({
       window.removeEventListener("mouseup", handleMouseUp);
     };
 
-    const handleMouseDown = (e: React.MouseEvent) => {
-      isResizing.current = true;
-      lastX.current = e.clientX;
-      document.body.style.cursor = "col-resize";
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    };
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [onResize, position]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isResizing.current = true;
-    lastX.current = e.clientX;
-    document.body.style.cursor = "col-resize";
-    window.addEventListener("mousemove", (moveEvent: MouseEvent) => {
-      if (!isResizing.current) return;
-      const delta = moveEvent.clientX - lastX.current;
-      lastX.current = moveEvent.clientX;
-      onResize(position === "left" ? delta : -delta);
-    });
-    window.addEventListener(
-      "mouseup",
-      () => {
-        isResizing.current = false;
-        document.body.style.cursor = "default";
-      },
-      { once: true },
-    );
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
   return (
     <div
       onMouseDown={handleMouseDown}
       className={`
-        w-1.5 h-full cursor-col-resize hover:bg-primary/30 transition-colors
-        fixed top-0 bottom-0 z-50
+        w-1.5 h-full cursor-col-resize hover:bg-[#007aff]/30 transition-colors
+        absolute top-0 bottom-0 z-50
       `}
       style={{
-        [position]: "-3px", // Center the handle over the border
+        [position === "right" ? "right" : "left"]: "-3px",
       }}
     />
   );

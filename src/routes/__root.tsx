@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "Antigravity - Pro Design Tool",
       },
     ],
     links: [
@@ -28,14 +28,23 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-import { Layers, Settings2, Layout as LayoutIcon } from "lucide-react";
-import { Sidebar } from "../components/Sidebar";
-import { ResizeHandle } from "../components/ResizeHandle";
-import { useEditorStore } from "../lib/useEditorStore";
-import { Canvas } from "../components/Canvas";
-import { Artboard } from "../components/Artboard";
-import { LayerTree } from "../components/LayerTree";
-import { PropertyInspector } from "../components/PropertyInspector";
+import {
+  Layers,
+  Settings2,
+  Layout as LayoutIcon,
+  Play,
+  Share2,
+  MousePointer2,
+  Type,
+  Box,
+} from "lucide-react";
+import { Sidebar } from "@/components/Sidebar";
+import { ResizeHandle } from "@/components/ResizeHandle";
+import { useEditorStore } from "@/lib/useEditorStore";
+import { Canvas } from "@/components/Canvas";
+import { Artboard } from "@/components/Artboard";
+import { LayerTree } from "@/components/LayerTree";
+import { PropertyInspector } from "@/components/PropertyInspector";
 
 function RootDocument() {
   const {
@@ -44,6 +53,8 @@ function RootDocument() {
     setRightWidth,
     toggleLeftCollapse,
     toggleRightCollapse,
+    camera,
+    elements,
   } = useEditorStore();
 
   const { leftWidth, rightWidth, isLeftCollapsed, isRightCollapsed } = layout;
@@ -52,22 +63,64 @@ function RootDocument() {
     <html lang="en">
       <head>
         <HeadContent />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
+        <style>{`
+          body { font-family: 'Inter', sans-serif; overflow: hidden; margin: 0; padding: 0; }
+          .font-mono { font-family: 'JetBrains Mono', monospace; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          ::selection { background: rgba(0, 122, 255, 0.2); }
+        `}</style>
       </head>
-      <body>
-        <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
-          {/* Top Bar */}
-          <header className="h-12 border-b border-border flex items-center px-4 shrink-0 justify-between bg-card z-50">
-            <div className="flex items-center gap-2 font-bold text-lg">
-              <LayoutIcon className="text-primary" size={20} />
-              <span>No-Code Builder</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1 px-2 text-xs font-mono border border-border">
-                <span className="text-muted-foreground">project:</span>
-                <span className="text-primary">starter-app</span>
+      <body className="antialiased text-[#1a1a1a] bg-[#f0f0f0]">
+        <div className="flex flex-col h-screen overflow-hidden">
+          {/* Editor Header - Professional Tool Chrome */}
+          <header className="h-10 border-b border-border flex items-center px-3 shrink-0 justify-between bg-card z-[100] select-none">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 font-bold text-[13px] tracking-tight">
+                <div className="w-5 h-5 bg-[#007aff] rounded flex items-center justify-center text-white">
+                  <LayoutIcon size={12} />
+                </div>
+                <span>Antigravity</span>
               </div>
-              <button className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity">
-                Publish
+              <div className="h-4 w-[1px] bg-border mx-1" />
+              <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <span>My Project</span>
+                <span className="opacity-40">/</span>
+                <span className="text-foreground">Index.html</span>
+              </div>
+            </div>
+
+            {/* Quick Tools */}
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-muted/20 border border-border rounded-lg p-0.5 shadow-sm">
+              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                <MousePointer2 size={14} />
+              </button>
+              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                <Type size={14} />
+              </button>
+              <button className="p-1.5 hover:bg-card rounded-md transition-all text-muted-foreground hover:text-foreground">
+                <Box size={14} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors border border-transparent hover:border-border rounded-md">
+                <Share2 size={13} />
+                <span>Share</span>
+              </button>
+              <button className="flex items-center gap-1.5 px-3 py-1 bg-[#007aff] text-white text-[11px] font-bold rounded-md hover:bg-[#0066d6] transition-all shadow-[0_1px_2px_rgba(0,122,255,0.2)]">
+                <Play size={11} fill="currentColor" />
+                <span>Preview</span>
               </button>
             </div>
           </header>
@@ -82,12 +135,12 @@ function RootDocument() {
               `,
             }}
           >
-            {/* Left Sidebar - Layers */}
-            <div className="relative group h-full">
+            {/* Left Sidebar - Navigator */}
+            <div className="relative group h-full z-[80]">
               <Sidebar
                 position="left"
-                title="Layers"
-                icon={<Layers size={18} />}
+                title="Navigator"
+                icon={<Layers size={14} />}
                 width={leftWidth}
                 isCollapsed={isLeftCollapsed}
                 onToggleCollapse={toggleLeftCollapse}
@@ -95,12 +148,12 @@ function RootDocument() {
                 <LayerTree />
               </Sidebar>
               {!isLeftCollapsed && (
-                <div className="absolute top-0 -right-0.5 bottom-0 z-50">
+                <div className="absolute top-0 -right-0.5 bottom-0 z-[90]">
                   <ResizeHandle
                     position="right"
                     onResize={(delta) =>
                       setLeftWidth(
-                        Math.min(420, Math.max(200, leftWidth + delta)),
+                        Math.min(420, Math.max(180, leftWidth + delta)),
                       )
                     }
                   />
@@ -108,22 +161,22 @@ function RootDocument() {
               )}
             </div>
 
-            {/* Canvas Area */}
-            <main className="h-full relative overflow-hidden flex flex-col">
+            {/* Spatial Workspace */}
+            <main className="h-full relative overflow-hidden flex flex-col bg-[#f0f0f0]">
               <Canvas>
                 <Artboard />
               </Canvas>
             </main>
 
-            {/* Right Sidebar - Inspector */}
-            <div className="relative group h-full">
+            {/* Right Sidebar - Design */}
+            <div className="relative group h-full z-[80]">
               {!isRightCollapsed && (
-                <div className="absolute top-0 -left-0.5 bottom-0 z-50">
+                <div className="absolute top-0 -left-0.5 bottom-0 z-[90]">
                   <ResizeHandle
                     position="left"
                     onResize={(delta) =>
                       setRightWidth(
-                        Math.min(480, Math.max(260, rightWidth + delta)),
+                        Math.min(480, Math.max(240, rightWidth + delta)),
                       )
                     }
                   />
@@ -131,8 +184,8 @@ function RootDocument() {
               )}
               <Sidebar
                 position="right"
-                title="Inspector"
-                icon={<Settings2 size={18} />}
+                title="Design"
+                icon={<Settings2 size={14} />}
                 width={rightWidth}
                 isCollapsed={isRightCollapsed}
                 onToggleCollapse={toggleRightCollapse}
@@ -141,6 +194,21 @@ function RootDocument() {
               </Sidebar>
             </div>
           </div>
+
+          {/* Status Bar */}
+          <footer className="h-6 border-t border-border bg-card flex items-center px-3 justify-between text-[10px] text-muted-foreground font-medium select-none z-[100]">
+            <div className="flex gap-4">
+              <span>View: Design</span>
+              <span>Layers: {elements.length}</span>
+            </div>
+            <div className="flex gap-4 font-mono">
+              <span>X: {Math.round(camera.x)}px</span>
+              <span>Y: {Math.round(camera.y)}px</span>
+              <span className="text-[#007aff]">
+                {Math.round(camera.scale * 100)}%
+              </span>
+            </div>
+          </footer>
         </div>
 
         <TanStackDevtools

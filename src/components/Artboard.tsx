@@ -1,6 +1,5 @@
-import React from "react";
-import { useEditorStore } from "../lib/useEditorStore";
-import { Element } from "./Element";
+import { useEditorStore } from "@/lib/useEditorStore";
+import { Element as EditorElementComponent } from "./Element";
 
 interface ArtboardProps {
   children?: React.ReactNode;
@@ -15,20 +14,15 @@ export const Artboard: React.FC<ArtboardProps> = ({ children }) => {
         width: `${artboard.width}px`,
         height: `${artboard.height}px`,
         backgroundColor: artboard.background,
-        // Center the artboard within the transform layer initially
         left: "50%",
         top: "50%",
         transform: "translate(-50%, -50%)",
       }}
-      className="absolute shadow-2xl relative overflow-visible"
+      className="absolute shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.1)] outline outline-1 outline-black/5"
     >
-      {/* Grid Overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px]" />
-
-      {elements.map((element) => (
-        <Element key={element.id} element={element} />
+      {elements.map((el) => (
+        <EditorElementComponent key={el.id} element={el} />
       ))}
-
       {children}
     </div>
   );
