@@ -193,11 +193,6 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
       >
         <div className="pointer-events-auto">{children}</div>
       </div>
-
-      {/* Zoom Indicator */}
-      <div className="absolute bottom-4 right-4 bg-background/90 backdrop-blur-md border border-border rounded shadow-md px-2 py-1 text-[10px] font-mono font-bold z-50 text-muted-foreground">
-        {Math.round(camera.scale * 100)}%
-      </div>
     </div>
   );
 };

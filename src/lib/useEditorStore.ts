@@ -61,6 +61,9 @@ interface EditorState {
     // History
     history: HistoryState
 
+    // Theme
+    theme: 'dark' | 'light'
+
     // Actions
     addElement: (element: EditorElement) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
@@ -73,7 +76,10 @@ interface EditorState {
     redo: () => void
 
     setCamera: (camera: Partial<CameraState>) => void
+    resetCamera: (containerWidth?: number, containerHeight?: number) => void
     setArtboard: (artboard: Partial<ArtboardState>) => void
+
+    setTheme: (theme: 'dark' | 'light') => void
 
     setLeftWidth: (width: number) => void
     setRightWidth: (width: number) => void
@@ -112,6 +118,7 @@ export const useEditorStore = create<EditorState>()(
             artboard: { width: 1440, height: 900, background: '#f9fafb' },
             layout: { leftWidth: 240, rightWidth: 280, isLeftCollapsed: false, isRightCollapsed: false },
             history: { past: [], future: [] },
+            theme: 'dark',
 
             // Helper to push state to history
             saveHistory: () => {
@@ -200,6 +207,30 @@ export const useEditorStore = create<EditorState>()(
             setCamera: (camera) =>
                 set((state) => ({ camera: { ...state.camera, ...camera } })),
 
+            resetCamera: (containerWidth, containerHeight) => {
+                const { artboard } = get()
+                if (containerWidth && containerHeight) {
+                    const padding = 100 // 50px breathing room on each side
+                    const availableWidth = containerWidth - padding
+                    const availableHeight = containerHeight - padding
+
+                    // Calculate scale to fit artboard in available space, cap at 1.0 (100%)
+                    const fitScale = Math.min(
+                        1,
+                        availableWidth / artboard.width,
+                        availableHeight / artboard.height
+                    )
+
+                    // Center artboard at the calculated scale
+                    const x = (containerWidth - artboard.width * fitScale) / 2
+                    const y = (containerHeight - artboard.height * fitScale) / 2
+
+                    set({ camera: { scale: fitScale, x, y } })
+                } else {
+                    set({ camera: { scale: 1, x: 0, y: 0 } })
+                }
+            },
+
             setArtboard: (artboard) => {
                 get().saveHistory()
                 set((state) => ({ artboard: { ...state.artboard, ...artboard } }))
@@ -230,6 +261,8 @@ export const useEditorStore = create<EditorState>()(
                 set((state) => ({
                     layout: { ...state.layout, isRightCollapsed: !state.layout.isRightCollapsed },
                 })),
+
+            setTheme: (theme) => set({ theme }),
         }),
         {
             name: 'editor-storage',

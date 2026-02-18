@@ -1,202 +1,242 @@
 import React from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
+import {
+  Type,
+  Maximize2,
+  Move,
+  Palette,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+} from "lucide-react";
 
-const Section = ({
-  title,
-  children,
-}: {
+export const PropertyInspector: React.FC = () => {
+  const { selectedId, elements, updateElement } = useEditorStore();
+  const element = elements.find((el) => el.id === selectedId);
+
+  if (!element) {
+    return (
+      <div className="p-12 text-center space-y-3 opacity-30 select-none h-full flex flex-col items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-border flex items-center justify-center">
+          <Maximize2 size={20} />
+        </div>
+        <p className="text-[11px] font-medium tracking-wide uppercase">
+          Select an element
+        </p>
+      </div>
+    );
+  }
+
+  const handlePropChange = (key: string, value: any) => {
+    updateElement(element.id, { [key]: value });
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto no-scrollbar space-y-px bg-border/20">
+      {/* Selection Summary */}
+      <div className="p-4 bg-surface border-b border-border">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="p-1.5 rounded bg-primary/10 text-primary">
+            {element.type === "text" ? (
+              <Type size={14} />
+            ) : (
+              <Maximize2 size={14} />
+            )}
+          </span>
+          <span className="text-[13px] font-bold text-text-main">
+            {element.id}
+          </span>
+        </div>
+        <p className="text-[10px] text-text-muted font-medium uppercase tracking-widest">
+          {element.type} Layer
+        </p>
+      </div>
+
+      {/* Geometry Section */}
+      <Section title="Size & Position" icon={<Move size={12} />}>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+          <Control
+            label="X"
+            value={element.props.x}
+            onChange={(v) => handlePropChange("x", parseInt(v))}
+          />
+          <Control
+            label="Y"
+            value={element.props.y}
+            onChange={(v) => handlePropChange("y", parseInt(v))}
+          />
+          <Control
+            label="W"
+            value={element.props.width}
+            onChange={(v) => handlePropChange("width", parseInt(v))}
+          />
+          <Control
+            label="H"
+            value={element.props.height}
+            onChange={(v) => handlePropChange("height", parseInt(v))}
+          />
+        </div>
+      </Section>
+
+      {/* Text Properties */}
+      {element.type === "text" && (
+        <Section title="Typography" icon={<Type size={12} />}>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] text-text-muted font-bold uppercase tracking-wider block mb-2">
+                Font Family
+              </label>
+              <select className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-[12px] text-text-main focus:ring-1 focus:ring-primary outline-none transition-all">
+                <option>Inter</option>
+                <option>JetBrains Mono</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Control
+                label="Size"
+                value={element.props.fontSize || 16}
+                onChange={(v) => handlePropChange("fontSize", parseInt(v))}
+              />
+              <Control label="Weight" value="Regular" />
+            </div>
+            <div className="flex items-center justify-between p-0.5 bg-background border border-border rounded-lg">
+              <IconButton icon={<AlignLeft size={14} />} active />
+              <IconButton icon={<AlignCenter size={14} />} />
+              <IconButton icon={<AlignRight size={14} />} />
+              <IconButton icon={<AlignJustify size={14} />} />
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {/* Style Section */}
+      <Section title="Fill & Stroke" icon={<Palette size={12} />}>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 group">
+            <div className="flex items-center gap-2 flex-1">
+              <div
+                className="w-10 h-10 rounded-lg border border-border shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                style={{ background: element.props.background || "#ffffff" }}
+              />
+              <div className="flex flex-col">
+                <input
+                  type="text"
+                  value={element.props.background || "#000000"}
+                  onChange={(e) =>
+                    handlePropChange("background", e.target.value)
+                  }
+                  className="bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 uppercase"
+                />
+                <span className="text-[10px] text-text-muted font-bold uppercase">
+                  Background Color
+                </span>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-text-muted group-hover:text-text-main">
+              100%
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Control
+              label="Radius"
+              value={element.props.borderRadius || 0}
+              onChange={(v) => handlePropChange("borderRadius", parseInt(v))}
+            />
+            <Control
+              label="Z Index"
+              value={element.props.zIndex || 1}
+              onChange={(v) => handlePropChange("zIndex", parseInt(v))}
+            />
+          </div>
+        </div>
+      </Section>
+    </div>
+  );
+};
+
+const Section: React.FC<{
   title: string;
   children: React.ReactNode;
-}) => (
-  <div className="border-b border-border py-3 px-3">
-    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 leading-none">
-      {title}
-    </h3>
-    <div className="grid grid-cols-2 gap-x-3 gap-y-3">{children}</div>
+  icon: React.ReactNode;
+}> = ({ title, children, icon }) => (
+  <div className="bg-surface border-b border-border shadow-sm">
+    <div className="px-4 py-3 flex items-center justify-between group cursor-pointer hover:bg-background/20 transition-colors">
+      <div className="flex items-center gap-2">
+        <span className="text-text-muted group-hover:text-text-main transition-colors">
+          {icon}
+        </span>
+        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider group-hover:text-text-main transition-all">
+          {title}
+        </span>
+      </div>
+      <ChevronDown
+        size={12}
+        className="text-text-muted group-hover:text-text-main transition-all transform group-hover:translate-y-0.5"
+      />
+    </div>
+    <div className="px-4 pb-5 pt-1">{children}</div>
   </div>
 );
 
 const Control = ({
   label,
-  children,
+  value,
+  onChange,
 }: {
   label: string;
-  children: React.ReactNode;
+  value: any;
+  onChange?: (v: string) => void;
 }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-[10px] text-muted-foreground font-medium">
+  <div className="flex items-center gap-2 bg-background/50 border border-border/50 rounded-lg px-2 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 transition-all group">
+    <span className="text-[10px] font-bold text-text-muted tracking-tight w-4 group-hover:text-text-main">
       {label}
-    </label>
-    {children}
+    </span>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange?.(e.target.value)}
+      className="w-full bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 text-right"
+    />
   </div>
 );
 
-const Input = ({
-  className = "",
-  ...rest
-}: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input
-    {...rest}
-    onFocus={(e) => {
-      useEditorStore.getState().saveHistory();
-      rest.onFocus?.(e);
-    }}
-    className={`w-full bg-muted/40 border-none rounded-[3px] px-1.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-[#007aff] transition-shadow ${className}`}
-  />
+const IconButton = ({
+  icon,
+  active,
+}: {
+  icon: React.ReactNode;
+  active?: boolean;
+}) => (
+  <button
+    className={`
+    flex-1 flex justify-center py-2.5 rounded-md transition-all
+    ${active ? "bg-surface shadow-md text-primary" : "text-text-muted hover:bg-surface hover:text-text-main"}
+  `}
+  >
+    {icon}
+  </button>
 );
 
-export const PropertyInspector: React.FC = () => {
-  const { selectedId, elements, updateElement } = useEditorStore();
-  const selectedElement = elements.find((el) => el.id === selectedId);
-
-  if (!selectedElement) {
-    return (
-      <div className="h-full flex items-center justify-center p-8 text-center text-[11px] text-muted-foreground italic leading-relaxed opacity-60">
-        Select an element on the canvas to edit its properties.
-      </div>
-    );
-  }
-
-  const { props } = selectedElement;
-
-  const handleChange = (key: string, value: any) => {
-    updateElement(selectedElement.id, { [key]: value });
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-card overflow-y-auto no-scrollbar">
-      <Section title="Layout">
-        <Control label="X">
-          <Input
-            type="number"
-            value={props.x}
-            onChange={(e) => handleChange("x", parseInt(e.target.value) || 0)}
-          />
-        </Control>
-        <Control label="Y">
-          <Input
-            type="number"
-            value={props.y}
-            onChange={(e) => handleChange("y", parseInt(e.target.value) || 0)}
-          />
-        </Control>
-        <Control label="Width">
-          <Input
-            type="number"
-            value={props.width}
-            onChange={(e) =>
-              handleChange("width", parseInt(e.target.value) || 0)
-            }
-          />
-        </Control>
-        <Control label="Height">
-          <Input
-            type="number"
-            value={props.height}
-            onChange={(e) =>
-              handleChange("height", parseInt(e.target.value) || 0)
-            }
-          />
-        </Control>
-      </Section>
-
-      <Section title="Appearance">
-        {selectedElement.type === "text" ||
-        selectedElement.type === "button" ? (
-          <>
-            <div className="col-span-2">
-              <Control label="Text Content">
-                <Input
-                  type="text"
-                  value={props.text || ""}
-                  onChange={(e) => handleChange("text", e.target.value)}
-                />
-              </Control>
-            </div>
-            <Control label="Font Size">
-              <Input
-                type="number"
-                value={props.fontSize || 16}
-                onChange={(e) =>
-                  handleChange("fontSize", parseInt(e.target.value) || 0)
-                }
-              />
-            </Control>
-            <Control label="Text Color">
-              <div className="flex gap-1.5">
-                <div
-                  className="w-6 h-6 rounded border border-border shrink-0 cursor-pointer"
-                  style={{ backgroundColor: props.color || "#000000" }}
-                  onClick={() =>
-                    document.getElementById("color-picker")?.click()
-                  }
-                />
-                <Input
-                  type="text"
-                  value={props.color || ""}
-                  onChange={(e) => handleChange("color", e.target.value)}
-                  className="uppercase"
-                />
-                <input
-                  id="color-picker"
-                  type="color"
-                  className="hidden"
-                  value={props.color || "#000000"}
-                  onChange={(e) => handleChange("color", e.target.value)}
-                />
-              </div>
-            </Control>
-          </>
-        ) : null}
-
-        {(selectedElement.type === "button" ||
-          selectedElement.type === "container") && (
-          <>
-            <Control label="Background">
-              <div className="flex gap-1.5">
-                <div
-                  className="w-6 h-6 rounded border border-border shrink-0 cursor-pointer"
-                  style={{ backgroundColor: props.background || "#ffffff" }}
-                  onClick={() => document.getElementById("bg-picker")?.click()}
-                />
-                <Input
-                  type="text"
-                  value={props.background || ""}
-                  onChange={(e) => handleChange("background", e.target.value)}
-                  className="uppercase"
-                />
-                <input
-                  id="bg-picker"
-                  type="color"
-                  className="hidden"
-                  value={props.background || "#ffffff"}
-                  onChange={(e) => handleChange("background", e.target.value)}
-                />
-              </div>
-            </Control>
-            <Control label="Radius">
-              <Input
-                type="number"
-                value={props.borderRadius || 0}
-                onChange={(e) =>
-                  handleChange("borderRadius", parseInt(e.target.value) || 0)
-                }
-              />
-            </Control>
-          </>
-        )}
-      </Section>
-
-      <div className="mt-auto p-3 bg-muted/20">
-        <button
-          onClick={() =>
-            useEditorStore.getState().removeElement(selectedElement.id)
-          }
-          className="w-full py-2 bg-destructive/5 text-destructive text-[11px] font-bold rounded-[4px] hover:bg-destructive hover:text-white transition-all uppercase tracking-tight"
-        >
-          Delete Element
-        </button>
-      </div>
-    </div>
-  );
-};
+const ChevronDown = ({
+  size,
+  className,
+}: {
+  size: number;
+  className?: string;
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);

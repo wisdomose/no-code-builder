@@ -23,53 +23,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div
       className={`
-        h-full bg-card border-border flex flex-col select-none
+        h-full bg-surface border-border flex flex-col select-none
         ${position === "left" ? "border-r" : "border-l"}
+        transition-all duration-200 ease-in-out
       `}
       style={{ width: isCollapsed ? "48px" : `${width}px` }}
     >
-      <div className="h-9 border-b border-border flex items-center px-2 shrink-0 bg-muted/30">
+      <div className="h-10 border-b border-border flex items-center px-2 shrink-0 bg-background/30">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground truncate flex-1">
-              <span className="text-foreground/70">{icon}</span>
+            <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-[0.1em] text-text-muted truncate flex-1">
+              <span className="text-primary/70">{icon}</span>
               <span>{title}</span>
             </div>
             <button
               onClick={onToggleCollapse}
-              className="p-1 hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors shrink-0"
+              className="p-1.5 hover:bg-surface hover:text-text-main rounded-md text-text-muted transition-all shrink-0"
               title="Collapse"
             >
               {position === "left" ? (
-                <ChevronLeft size={14} />
+                <ChevronLeft size={14} strokeWidth={2.5} />
               ) : (
-                <ChevronRight size={14} />
+                <ChevronRight size={14} strokeWidth={2.5} />
               )}
             </button>
           </>
         ) : (
           <button
             onClick={onToggleCollapse}
-            className="p-1.5 w-full hover:bg-accent hover:text-accent-foreground rounded text-muted-foreground transition-colors flex items-center justify-center"
+            className="p-2 w-full hover:bg-surface hover:text-primary rounded-md text-text-muted transition-all flex items-center justify-center"
             title="Expand"
           >
             {position === "left" ? (
-              <ChevronRight size={14} />
+              <ChevronRight size={14} strokeWidth={2.5} />
             ) : (
-              <ChevronLeft size={14} />
+              <ChevronLeft size={14} strokeWidth={2.5} />
             )}
           </button>
         )}
       </div>
 
       <div
-        className={`flex-1 overflow-auto ${isCollapsed ? "hidden" : "block"}`}
+        className={`flex-1 overflow-auto no-scrollbar ${isCollapsed ? "hidden" : "block"}`}
       >
         {children}
       </div>
 
       {isCollapsed && (
-        <div className="flex-1 flex flex-col items-center pt-4 gap-4 text-muted-foreground opacity-50">
+        <div className="flex-1 flex flex-col items-center pt-6 gap-6 text-text-muted/40">
           {icon}
         </div>
       )}
