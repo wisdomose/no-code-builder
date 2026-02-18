@@ -170,7 +170,8 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
           transformOrigin: "0 0",
           transition: isPanning.current ? "none" : "transform 0.05s linear",
-          willChange: "transform",
+          backfaceVisibility: "hidden", // Helps with rendering quality
+          transformStyle: "preserve-3d", // Keeps content in its own layer for crispness
         }}
         className="absolute inset-0 pointer-events-none"
       >

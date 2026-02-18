@@ -1,6 +1,46 @@
 import React from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
 
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <div className="border-b border-border py-3 px-3">
+    <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 leading-none">
+      {title}
+    </h3>
+    <div className="grid grid-cols-2 gap-x-3 gap-y-3">{children}</div>
+  </div>
+);
+
+const Control = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[10px] text-muted-foreground font-medium">
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+const Input = ({
+  className = "",
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement>) => (
+  <input
+    {...rest}
+    className={`w-full bg-muted/40 border-none rounded-[3px] px-1.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-[#007aff] transition-shadow ${className}`}
+  />
+);
+
 export const PropertyInspector: React.FC = () => {
   const { selectedId, elements, updateElement } = useEditorStore();
   const selectedElement = elements.find((el) => el.id === selectedId);
@@ -18,46 +58,6 @@ export const PropertyInspector: React.FC = () => {
   const handleChange = (key: string, value: any) => {
     updateElement(selectedElement.id, { [key]: value });
   };
-
-  const Section = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="border-b border-border py-3 px-3">
-      <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3 leading-none">
-        {title}
-      </h3>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-3">{children}</div>
-    </div>
-  );
-
-  const Control = ({
-    label,
-    children,
-  }: {
-    label: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-[10px] text-muted-foreground font-medium">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-
-  const Input = ({
-    className = "",
-    ...rest
-  }: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <input
-      {...rest}
-      className={`w-full bg-muted/40 border-none rounded-[3px] px-1.5 py-1 text-[11px] font-mono focus:ring-1 focus:ring-[#007aff] transition-shadow ${className}`}
-    />
-  );
 
   return (
     <div className="flex flex-col h-full bg-card overflow-y-auto no-scrollbar">
