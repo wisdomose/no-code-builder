@@ -6,7 +6,14 @@ interface ElementProps {
   element: IEditorElement;
 }
 
-export const Element: React.FC<ElementProps> = ({ element }) => {
+export const Element: React.FC<ElementProps> = ({
+  element: initialElement,
+}) => {
+  const element = useEditorStore(
+    (state) =>
+      state.elements.find((el) => el.id === initialElement.id) ||
+      initialElement,
+  );
   const { selectedId, setSelectedId, camera } = useEditorStore();
   const isSelected = selectedId === element.id;
 

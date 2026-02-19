@@ -11,6 +11,8 @@ import {
   AlignJustify,
 } from "lucide-react";
 
+import { ColorPicker } from "./ColorPicker";
+
 export const PropertyInspector: React.FC = () => {
   const { selectedId, elements, updateElement } = useEditorStore();
   const element = elements.find((el) => el.id === selectedId);
@@ -138,86 +140,83 @@ export const PropertyInspector: React.FC = () => {
         isExpanded={expandedSections.includes("Fill & Stroke")}
         onToggle={() => toggleSection("Fill & Stroke")}
       >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 group">
-            <div className="flex items-center gap-2 flex-1">
-              <div
-                className="w-10 h-10 rounded-lg border border-border shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                style={{ background: element.props.background || "#ffffff" }}
-              />
-              <div className="flex flex-col">
-                <input
-                  type="text"
-                  value={element.props.background || "#000000"}
-                  onChange={(e) =>
-                    handlePropChange("background", e.target.value)
-                  }
-                  className="bg-transparent border-none p-0 text-[12px] font-mono font-bold text-text-main focus:ring-0 outline-none uppercase"
-                />
-                <span className="text-[10px] text-text-muted font-bold uppercase">
-                  Background Color
-                </span>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-text-muted group-hover:text-text-main">
-              100%
-            </span>
-          </div>
+        <ColorPicker
+          color={
+            (element.type === "text"
+              ? element.props.color
+              : element.props.background) || "#ffffff"
+          }
+          onChange={(newColor) =>
+            handlePropChange(
+              element.type === "text" ? "color" : "background",
+              newColor,
+            )
+          }
+        />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Control
-              label="Radius"
-              value={element.props.borderRadius || 0}
-              onChange={(v) => handlePropChange("borderRadius", v)}
-            />
-            <Control
-              label="Z Index"
-              value={element.props.zIndex || 1}
-              onChange={(v) => handlePropChange("zIndex", v)}
-            />
-          </div>
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Control
+            label="Radius"
+            value={element.props.borderRadius || 0}
+            onChange={(v) => handlePropChange("borderRadius", v)}
+          />
+          <Control
+            label="Z Index"
+            value={element.props.zIndex || 1}
+            onChange={(v) => handlePropChange("zIndex", v)}
+          />
         </div>
       </Section>
     </div>
   );
 };
 
-const Section: React.FC<{
+// --- Internal Sub-Components ---
+
+function Section({
+  title,
+  children,
+  icon,
+  isExpanded,
+  onToggle,
+}: {
   title: string;
   children: React.ReactNode;
   icon: React.ReactNode;
   isExpanded: boolean;
   onToggle: () => void;
-}> = ({ title, children, icon, isExpanded, onToggle }) => (
-  <div className="bg-surface border-b border-border shadow-sm">
-    <div
-      onClick={onToggle}
-      className="px-4 py-3 flex items-center justify-between group cursor-pointer hover:bg-background/20 transition-colors"
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-text-muted group-hover:text-text-main transition-colors">
-          {icon}
-        </span>
-        <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider group-hover:text-text-main transition-all">
-          {title}
-        </span>
+}) {
+  return (
+    <div className="bg-surface border-b border-border shadow-sm">
+      <div
+        onClick={onToggle}
+        className="px-4 py-3 flex items-center justify-between group cursor-pointer hover:bg-background/20 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-text-muted group-hover:text-text-main transition-colors">
+            {icon}
+          </span>
+          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider group-hover:text-text-main transition-all">
+            {title}
+          </span>
+        </div>
+        <ChevronDown
+          size={12}
+          className={`text-text-muted group-hover:text-text-main transition-all transform ${
+            isExpanded ? "rotate-0" : "-rotate-90"
+          }`}
+        />
       </div>
-      <ChevronDown
-        size={12}
-        className={`text-text-muted group-hover:text-text-main transition-all transform ${
-          isExpanded ? "rotate-0" : "-rotate-90"
-        }`}
-      />
+      {isExpanded && (
+        <div className="px-4 pb-5 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+          {children}
+        </div>
+      )}
     </div>
-    {isExpanded && (
-      <div className="px-4 pb-5 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-        {children}
-      </div>
-    )}
-  </div>
-);
+  );
+}
 
-const Control = ({
+function Control({
   label,
   value,
   onChange,
@@ -227,7 +226,7 @@ const Control = ({
   value: any;
   onChange?: (v: number) => void;
   readOnly?: boolean;
-}) => {
+}) {
   const handleWheel = (e: React.WheelEvent) => {
     if (readOnly || !onChange) return;
     const delta = e.deltaY < 0 ? 1 : -1;
@@ -258,43 +257,47 @@ const Control = ({
       />
     </div>
   );
-};
+}
 
-const IconButton = ({
+function IconButton({
   icon,
   active,
 }: {
   icon: React.ReactNode;
   active?: boolean;
-}) => (
-  <button
-    className={`
-    flex-1 flex justify-center py-2.5 rounded-md transition-all
-    ${active ? "bg-surface shadow-md text-primary" : "text-text-muted hover:bg-surface hover:text-text-main"}
-  `}
-  >
-    {icon}
-  </button>
-);
+}) {
+  return (
+    <button
+      className={`
+      flex-1 flex justify-center py-2.5 rounded-md transition-all
+      ${active ? "bg-surface shadow-md text-primary" : "text-text-muted hover:bg-surface hover:text-text-main"}
+    `}
+    >
+      {icon}
+    </button>
+  );
+}
 
-const ChevronDown = ({
+function ChevronDown({
   size,
   className,
 }: {
   size: number;
   className?: string;
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-);
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
