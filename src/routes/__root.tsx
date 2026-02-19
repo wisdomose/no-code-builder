@@ -28,6 +28,7 @@ import { LayerTree } from "@/components/LayerTree";
 import { PropertyInspector } from "@/components/PropertyInspector";
 import { Header } from "@/components/Header";
 import { StatusBar } from "@/components/StatusBar";
+import { SectionLibrary } from "@/components/SectionLibrary";
 
 function RootDocument() {
   const {
@@ -39,6 +40,8 @@ function RootDocument() {
     camera,
     resetCamera,
     theme,
+    leftSidebarTab,
+    setLeftSidebarTab,
   } = useEditorStore();
 
   const mainRef = useRef<HTMLElement>(null);
@@ -108,8 +111,19 @@ function RootDocument() {
               <div className="relative group h-full z-10">
                 <Sidebar
                   position="left"
-                  title="Layers"
-                  icon={<Layers size={14} />}
+                  title={
+                    leftSidebarTab.charAt(0).toUpperCase() +
+                    leftSidebarTab.slice(1)
+                  }
+                  icon={
+                    leftSidebarTab === "layers" ? (
+                      <Layers size={14} />
+                    ) : leftSidebarTab === "assets" ? (
+                      <Box size={14} />
+                    ) : (
+                      <Database size={14} />
+                    )
+                  }
                   width={leftWidth}
                   isCollapsed={isLeftCollapsed}
                   onToggleCollapse={toggleLeftCollapse}
@@ -117,16 +131,30 @@ function RootDocument() {
                   <div className="p-1 border-b border-border flex gap-1 bg-background/30 mx-2 mt-2 rounded">
                     <SidebarTab
                       label="Layers"
-                      active
+                      active={leftSidebarTab === "layers"}
                       icon={<Layers size={11} />}
+                      onClick={() => setLeftSidebarTab("layers")}
                     />
-                    <SidebarTab label="Assets" icon={<Box size={11} />} />
+                    <SidebarTab
+                      label="Assets"
+                      active={leftSidebarTab === "assets"}
+                      icon={<Box size={11} />}
+                      onClick={() => setLeftSidebarTab("assets")}
+                    />
                     <SidebarTab
                       label="Sections"
+                      active={leftSidebarTab === "sections"}
                       icon={<Database size={11} />}
+                      onClick={() => setLeftSidebarTab("sections")}
                     />
                   </div>
-                  <LayerTree />
+                  {leftSidebarTab === "layers" && <LayerTree />}
+                  {leftSidebarTab === "sections" && <SectionLibrary />}
+                  {leftSidebarTab === "assets" && (
+                    <div className="p-4 text-center text-[11px] text-text-muted italic">
+                      Coming soon...
+                    </div>
+                  )}
                 </Sidebar>
                 {!isLeftCollapsed && (
                   <div className="absolute top-0 -right-0.5 bottom-0 z-[20]">
@@ -225,12 +253,15 @@ const SidebarTab = ({
   label,
   active,
   icon,
+  onClick,
 }: {
   label: string;
   active?: boolean;
   icon?: React.ReactNode;
+  onClick?: () => void;
 }) => (
   <button
+    onClick={onClick}
     className={`
     flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold uppercase tracking-tight rounded transition-all
     ${active ? "bg-surface text-primary shadow-sm" : "hover:bg-surface/50 text-text-muted hover:text-text-main"}

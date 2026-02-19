@@ -82,12 +82,15 @@ interface EditorState {
     resetCamera: (containerWidth?: number, containerHeight?: number) => void
     setArtboard: (artboard: Partial<ArtboardState>) => void
 
-    setTheme: (theme: 'dark' | 'light') => void
-
     setLeftWidth: (width: number) => void
     setRightWidth: (width: number) => void
     toggleLeftCollapse: () => void
     toggleRightCollapse: () => void
+    setTheme: (theme: 'dark' | 'light') => void
+
+    // Sidebar Tabbing
+    leftSidebarTab: 'layers' | 'assets' | 'sections'
+    setLeftSidebarTab: (tab: 'layers' | 'assets' | 'sections') => void
 }
 
 const MAX_HISTORY = 100
@@ -126,6 +129,9 @@ export const useEditorStore = create<EditorState>()(
             layout: { leftWidth: 240, rightWidth: 280, isLeftCollapsed: false, isRightCollapsed: false },
             history: { past: [], future: [] },
             theme: 'dark',
+            leftSidebarTab: 'layers',
+
+            setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
             /**
              * Pushes current elements and artboard state into history.
