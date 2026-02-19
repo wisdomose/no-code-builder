@@ -1,11 +1,25 @@
 import React, { useState } from "react";
 import { ChevronDown, Database, LayoutGrid, Type } from "lucide-react";
+import { useEditorStore } from "@/lib/useEditorStore";
+import { createHeroSection, createBentoGrid } from "@/lib/sectionTemplates";
 
 export const SectionLibrary: React.FC = () => {
+  const { addElements } = useEditorStore();
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     "Hero Sections",
     "Bento Grids",
   ]);
+
+  const handleAddHero = () => {
+    // Center-ish insertion
+    const elements = createHeroSection(300, 200);
+    addElements(elements);
+  };
+
+  const handleAddBento = () => {
+    const elements = createBentoGrid(300, 200);
+    addElements(elements);
+  };
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) =>
@@ -24,7 +38,7 @@ export const SectionLibrary: React.FC = () => {
         onToggle={() => toggleCategory("Hero Sections")}
       >
         <div className="grid grid-cols-1 gap-3 px-3">
-          <PresetCard name="Visual Hero">
+          <PresetCard name="Visual Hero" onClick={handleAddHero}>
             <div className="w-full aspect-video bg-background/50 rounded p-4 flex flex-col items-center justify-center gap-2 border border-border/50">
               <div className="w-full h-2 bg-text-muted/20 rounded-full" />
               <div className="w-2/3 h-1.5 bg-text-muted/10 rounded-full" />
@@ -42,8 +56,8 @@ export const SectionLibrary: React.FC = () => {
         active
       >
         <div className="grid grid-cols-1 gap-4 px-3">
-          <PresetCard name="2x2 Classic" active badge="2x2">
-            <div className="aspect-[16/10] grid grid-cols-2 grid-rows-2 gap-1.5 p-2 bg-background/50 border border-primary/30 rounded-lg">
+          <PresetCard name="2x2 Classic" badge="2x2" onClick={handleAddBento}>
+            <div className="aspect-[16/10] grid grid-cols-2 grid-rows-2 gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg group-hover/preset:border-primary/50 transition-colors">
               <div className="bg-surface rounded-md border border-border/50 shadow-inner" />
               <div className="bg-surface rounded-md border border-border/50 shadow-inner" />
               <div className="bg-surface rounded-md border border-border/50 shadow-inner" />
@@ -145,8 +159,10 @@ const PresetCard: React.FC<{
   children: React.ReactNode;
   active?: boolean;
   badge?: string;
-}> = ({ name, children, active, badge }) => (
+  onClick?: () => void;
+}> = ({ name, children, active, badge, onClick }) => (
   <div
+    onClick={onClick}
     className={`
         relative group/preset rounded-xl border p-2 transition-all cursor-pointer
         ${active ? "bg-primary/5 border-primary shadow-[0_0_20px_rgba(59,130,246,0.15)] scale-[1.02]" : "bg-background/20 border-border hover:border-primary/50 hover:bg-surface/30"}

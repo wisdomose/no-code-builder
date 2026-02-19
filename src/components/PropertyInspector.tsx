@@ -9,6 +9,7 @@ import {
   AlignCenter,
   AlignRight,
   AlignJustify,
+  LayoutGrid,
 } from "lucide-react";
 
 import { ColorPicker } from "./ColorPicker";
@@ -121,13 +122,111 @@ export const PropertyInspector: React.FC = () => {
                 value={element.props.fontSize || 16}
                 onChange={(v) => handlePropChange("fontSize", v)}
               />
-              <Control label="Weight" value="Regular" readOnly />
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-tight">
+                  Weight
+                </span>
+                <select
+                  value={element.props.fontWeight || 400}
+                  onChange={(e) =>
+                    handlePropChange("fontWeight", e.target.value)
+                  }
+                  className="w-full bg-background/50 border border-border/50 rounded-lg px-2 py-1.5 text-[11px] font-bold text-text-main focus:border-primary outline-none transition-all cursor-pointer"
+                >
+                  <option value="400">Regular</option>
+                  <option value="500">Medium</option>
+                  <option value="600">Semibold</option>
+                  <option value="700">Bold</option>
+                  <option value="800">Black</option>
+                </select>
+              </div>
             </div>
             <div className="flex items-center justify-between p-0.5 bg-background border border-border rounded-lg">
-              <IconButton icon={<AlignLeft size={14} />} active />
-              <IconButton icon={<AlignCenter size={14} />} />
-              <IconButton icon={<AlignRight size={14} />} />
-              <IconButton icon={<AlignJustify size={14} />} />
+              <IconButton
+                icon={<AlignLeft size={14} />}
+                active={
+                  element.props.textAlign === "left" || !element.props.textAlign
+                }
+                onClick={() => handlePropChange("textAlign", "left")}
+              />
+              <IconButton
+                icon={<AlignCenter size={14} />}
+                active={element.props.textAlign === "center"}
+                onClick={() => handlePropChange("textAlign", "center")}
+              />
+              <IconButton
+                icon={<AlignRight size={14} />}
+                active={element.props.textAlign === "right"}
+                onClick={() => handlePropChange("textAlign", "right")}
+              />
+              <IconButton
+                icon={<AlignJustify size={14} />}
+                active={element.props.textAlign === "justify"}
+                onClick={() => handlePropChange("textAlign", "justify")}
+              />
+            </div>
+          </div>
+        </Section>
+      )}
+
+      {/* Layout Section */}
+      {(element.type === "container" || element.type === "div") && (
+        <Section
+          title="Auto Layout"
+          icon={<LayoutGrid size={12} />}
+          isExpanded={expandedSections.includes("Layout")}
+          onToggle={() => toggleSection("Layout")}
+        >
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                Direction
+              </span>
+              <div className="flex bg-background/50 rounded p-1 border border-border">
+                {["row", "column"].map((dir) => (
+                  <button
+                    key={dir}
+                    onClick={() => handlePropChange("flexDirection", dir)}
+                    className={`flex-1 flex items-center justify-center py-1.5 rounded transition-all ${element.props.flexDirection === dir ? "bg-surface text-primary shadow-sm" : "text-text-muted hover:text-text-main"}`}
+                  >
+                    <span className="text-[10px] font-bold uppercase">
+                      {dir}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Control
+                label="Gap"
+                value={element.props.gap || 0}
+                onChange={(v) => handlePropChange("gap", v)}
+              />
+              <Control
+                label="Padding"
+                value={Number(element.props.padding) || 0}
+                onChange={(v) => handlePropChange("padding", v)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider">
+                Align
+              </span>
+              <div className="flex bg-background/50 rounded p-1 border border-border">
+                {["start", "center", "end", "stretch"].map((align) => (
+                  <button
+                    key={align}
+                    onClick={() => handlePropChange("alignItems", align)}
+                    className={`flex-1 flex items-center justify-center py-1.5 rounded transition-all ${element.props.alignItems === align ? "bg-surface text-primary shadow-sm" : "text-text-muted hover:text-text-main"}`}
+                  >
+                    <span className="text-[9px] font-bold uppercase">
+                      {align.slice(0, 1)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </Section>
@@ -262,12 +361,15 @@ function Control({
 function IconButton({
   icon,
   active,
+  onClick,
 }: {
   icon: React.ReactNode;
   active?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className={`
       flex-1 flex justify-center py-2.5 rounded-md transition-all
       ${active ? "bg-surface shadow-md text-primary" : "text-text-muted hover:bg-surface hover:text-text-main"}

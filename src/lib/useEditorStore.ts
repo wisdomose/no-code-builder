@@ -1,6 +1,30 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+function getAbsoluteX(element: EditorElement, elements: EditorElement[]): number {
+    let x = element.props.x
+    let current = element
+    while (current.parentId) {
+        const parent = elements.find((el) => el.id === current.parentId)
+        if (!parent) break
+        x += parent.props.x
+        current = parent
+    }
+    return x
+}
+
+function getAbsoluteY(element: EditorElement, elements: EditorElement[]): number {
+    let y = element.props.y
+    let current = element
+    while (current.parentId) {
+        const parent = elements.find((el) => el.id === current.parentId)
+        if (!parent) break
+        y += parent.props.y
+        current = parent
+    }
+    return y
+}
+
 /**
  * Core element types for the editor.
  */
@@ -20,6 +44,20 @@ export interface EditorElement {
         zIndex?: number
         fontSize?: number
         borderRadius?: number
+        // Layout
+        display?: 'flex' | 'block'
+        flexDirection?: 'row' | 'column'
+        alignItems?: 'start' | 'center' | 'end' | 'stretch'
+        justifyContent?: 'start' | 'center' | 'end' | 'between' | 'around'
+        gap?: number
+        padding?: number | string
+        // Typography
+        fontWeight?: number | string
+        letterSpacing?: string
+        textAlign?: 'left' | 'center' | 'right' | 'justify'
+        // Effects
+        opacity?: number
+        boxShadow?: string
     }
 }
 
@@ -67,12 +105,19 @@ interface EditorState {
     // Theme
     theme: 'dark' | 'light'
 
+    hoveredElementId: string | null
+    draggingId: string | null
+
     // Actions
     addElement: (element: EditorElement) => void
+    addElements: (elements: EditorElement[]) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
     updateElements: (updates: { id: string; props: Partial<EditorElement['props']> }[]) => void
     removeElement: (id: string) => void
+    reparentElement: (id: string, newParentId?: string) => void
     setSelectedId: (id: string | null) => void
+    setHoveredElementId: (id: string | null) => void
+    setDraggingId: (id: string | null) => void
 
     saveHistory: () => void
     undo: () => void
@@ -130,6 +175,8 @@ export const useEditorStore = create<EditorState>()(
             history: { past: [], future: [] },
             theme: 'dark',
             leftSidebarTab: 'layers',
+            hoveredElementId: null,
+            draggingId: null,
 
             setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
@@ -146,6 +193,11 @@ export const useEditorStore = create<EditorState>()(
             addElement: (element) => {
                 get().saveHistory()
                 set((state) => ({ elements: [...state.elements, element] }))
+            },
+
+            addElements: (elements) => {
+                get().saveHistory()
+                set((state) => ({ elements: [...state.elements, ...elements] }))
             },
 
             updateElement: (id, props) => {
@@ -174,6 +226,46 @@ export const useEditorStore = create<EditorState>()(
             },
 
             setSelectedId: (id) => set({ selectedId: id }),
+
+            reparentElement: (id, newParentId) => {
+                const state = get()
+                const element = state.elements.find(el => el.id === id)
+                if (!element || element.parentId === newParentId) return
+
+                get().saveHistory()
+
+                // Calculate absolute position before change
+                const absX = getAbsoluteX(element, state.elements)
+                const absY = getAbsoluteY(element, state.elements)
+
+                let newX = absX
+                let newY = absY
+
+                if (newParentId) {
+                    const newParent = state.elements.find(el => el.id === newParentId)
+                    if (newParent) {
+                        const parentAbsX = getAbsoluteX(newParent, state.elements)
+                        const parentAbsY = getAbsoluteY(newParent, state.elements)
+                        newX = absX - parentAbsX
+                        newY = absY - parentAbsY
+                    }
+                }
+
+                set((state) => ({
+                    elements: state.elements.map((el) =>
+                        el.id === id
+                            ? {
+                                ...el,
+                                parentId: newParentId,
+                                props: { ...el.props, x: newX, y: newY }
+                            }
+                            : el
+                    ),
+                }))
+            },
+
+            setHoveredElementId: (id) => set({ hoveredElementId: id }),
+            setDraggingId: (id) => set({ draggingId: id }),
 
             /**
              * Performs a state undo by popping the last history entry.

@@ -14,8 +14,17 @@ export const Element: React.FC<ElementProps> = ({
       state.elements.find((el) => el.id === initialElement.id) ||
       initialElement,
   );
-  const { selectedId, setSelectedId, camera } = useEditorStore();
+  const {
+    selectedId,
+    setSelectedId,
+    camera,
+    hoveredElementId,
+    draggingId,
+    setDraggingId,
+  } = useEditorStore();
   const isSelected = selectedId === element.id;
+  const isHoveredAsParent = hoveredElementId === element.id;
+  const isDragging = draggingId === element.id;
 
   const getAllChildren = (
     allElements: IEditorElement[],
@@ -28,22 +37,25 @@ export const Element: React.FC<ElementProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
     e.stopPropagation();
 
-    // Always get the LATEST state before starting
     const store = useEditorStore.getState();
+    const currentElements = store.elements;
+
     store.saveHistory();
     setSelectedId(element.id);
+    setDraggingId(element.id);
 
     const startX = e.clientX;
     const startY = e.clientY;
 
-    // Capture absolute latest state for all affected elements
-    const currentElements = store.elements;
     const affectedElements = [
       element,
       ...getAllChildren(currentElements, element.id),
     ];
+    const affectedIds = new Set(affectedElements.map((el) => el.id));
+
     const startPositions = affectedElements.map((el) => ({
       id: el.id,
       x: el.props.x,
@@ -51,7 +63,6 @@ export const Element: React.FC<ElementProps> = ({
     }));
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      // Pull latest camera scale just in case it changed (zoom-while-drag)
       const currentCamera = useEditorStore.getState().camera;
       const deltaX = (moveEvent.clientX - startX) / currentCamera.scale;
       const deltaY = (moveEvent.clientY - startY) / currentCamera.scale;
@@ -64,12 +75,50 @@ export const Element: React.FC<ElementProps> = ({
         },
       }));
 
-      useEditorStore.getState().updateElements(updates);
+      store.updateElements(updates);
+
+      // --- Drop Target Detection ---
+      // We need to find if the mouse is over a potential container
+      // Use document.elementFromPoint and then find the corresponding ID
+      const target = document.elementFromPoint(
+        moveEvent.clientX,
+        moveEvent.clientY,
+      );
+      const elementNode = target?.closest("[data-element-id]");
+      const targetId = elementNode?.getAttribute("data-element-id");
+
+      if (targetId && targetId !== element.id && !affectedIds.has(targetId)) {
+        const potentialParent = currentElements.find(
+          (el) => el.id === targetId,
+        );
+        if (
+          potentialParent &&
+          (potentialParent.type === "container" ||
+            potentialParent.type === "div")
+        ) {
+          store.setHoveredElementId(targetId);
+        } else {
+          store.setHoveredElementId(null);
+        }
+      } else {
+        store.setHoveredElementId(null);
+      }
     };
 
     const handleMouseUp = () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+
+      const finalHoveredId = useEditorStore.getState().hoveredElementId;
+      if (finalHoveredId) {
+        store.reparentElement(element.id, finalHoveredId);
+      } else {
+        // Drop to root if outside
+        store.reparentElement(element.id, undefined);
+      }
+
+      store.setHoveredElementId(null);
+      store.setDraggingId(null);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -82,25 +131,31 @@ export const Element: React.FC<ElementProps> = ({
       case "text":
         return (
           <div
+            className="w-full h-full"
             style={{
               color: props.color,
-              fontSize: `${props.fontSize || 16}px`,
-              lineHeight: 1.2,
+              fontSize: `${props.fontSize || 14}px`,
+              fontWeight: props.fontWeight,
+              textAlign: props.textAlign,
+              letterSpacing: props.letterSpacing,
+              opacity: props.opacity,
             }}
-            className="w-full h-full flex items-center justify-center p-2 text-center break-words"
           >
-            {props.text || "Add text..."}
+            {props.text || "Type something..."}
           </div>
         );
       case "button":
         return (
           <div
-            className="w-full h-full shadow-sm flex items-center justify-center px-4 font-medium"
+            className="w-full h-full flex items-center justify-center transition-all active:scale-95 cursor-pointer"
             style={{
               backgroundColor: props.background,
               color: props.color,
               borderRadius: `${props.borderRadius || 4}px`,
               fontSize: `${props.fontSize || 14}px`,
+              fontWeight: props.fontWeight,
+              opacity: props.opacity,
+              boxShadow: props.boxShadow,
             }}
           >
             {props.text || "Button"}
@@ -116,6 +171,17 @@ export const Element: React.FC<ElementProps> = ({
               backgroundColor: props.background,
               borderRadius: `${props.borderRadius || 0}px`,
               border: props.background ? "none" : "1px dashed #ccc",
+              display: props.display || "flex",
+              flexDirection: props.flexDirection,
+              alignItems: props.alignItems,
+              justifyContent: props.justifyContent,
+              gap: `${props.gap || 0}px`,
+              padding:
+                typeof props.padding === "number"
+                  ? `${props.padding}px`
+                  : props.padding,
+              opacity: props.opacity,
+              boxShadow: props.boxShadow,
             }}
           />
         );
@@ -125,6 +191,7 @@ export const Element: React.FC<ElementProps> = ({
   return (
     <div
       onMouseDown={handleMouseDown}
+      data-element-id={element.id}
       style={{
         position: "absolute",
         left: `${element.props.x}px`,
@@ -136,7 +203,9 @@ export const Element: React.FC<ElementProps> = ({
       className={`
         group pointer-events-auto
         ${isSelected ? "ring-1 ring-[#007aff] z-[100]" : "hover:ring-1 hover:ring-[#007aff]/50"}
-        transition-[ring] duration-75
+        ${isHoveredAsParent ? "ring-2 ring-emerald-500 bg-emerald-500/5 z-[90]" : ""}
+        ${isDragging ? "pointer-events-none opacity-50" : ""}
+        transition-[ring,background-color,opacity] duration-150
         cursor-default
       `}
     >
