@@ -9,7 +9,7 @@ export const createHeroSection = (x: number, y: number): EditorElement[] => {
             id: sectionId,
             type: 'container',
             props: {
-                x, y, width: 800, height: 400,
+                x, y, width: 800, height: "auto",
                 background: '#ffffff',
                 borderRadius: 24,
                 display: 'flex',
@@ -81,7 +81,7 @@ export const createBentoGrid = (x: number, y: number): EditorElement[] => {
             id: sectionId,
             type: 'container',
             props: {
-                x, y, width: (itemW * 2) + gap + 40, height: (itemH * 2) + gap + 40,
+                x, y, width: (itemW * 2) + gap + 40, height: "auto",
                 background: 'transparent',
                 display: 'flex',
                 gap: gap,

@@ -19,9 +19,11 @@ export const Artboard: React.FC<ArtboardProps> = ({ children }) => {
       }}
       className="absolute shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.1)] outline outline-1 outline-black/5"
     >
-      {elements.map((el) => (
-        <EditorElementComponent key={el.id} element={el} />
-      ))}
+      {Object.values(elements)
+        .filter((el) => !el.parentId)
+        .map((el) => (
+          <EditorElementComponent key={el.id} element={el} />
+        ))}
       {children}
     </div>
   );

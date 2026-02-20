@@ -1,28 +1,21 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-function getAbsoluteX(element: EditorElement, elements: EditorElement[]): number {
+function getAbsolutePosition(
+    element: EditorElement,
+    elements: Record<string, EditorElement>
+): { x: number; y: number } {
     let x = element.props.x
-    let current = element
-    while (current.parentId) {
-        const parent = elements.find((el) => el.id === current.parentId)
-        if (!parent) break
-        x += parent.props.x
-        current = parent
-    }
-    return x
-}
-
-function getAbsoluteY(element: EditorElement, elements: EditorElement[]): number {
     let y = element.props.y
     let current = element
     while (current.parentId) {
-        const parent = elements.find((el) => el.id === current.parentId)
+        const parent = elements[current.parentId]
         if (!parent) break
+        x += parent.props.x
         y += parent.props.y
         current = parent
     }
-    return y
+    return { x, y }
 }
 
 /**
@@ -32,11 +25,12 @@ export interface EditorElement {
     id: string
     type: 'text' | 'image' | 'button' | 'container' | 'div'
     parentId?: string
+    index?: number
     props: {
         x: number
         y: number
-        width: number
-        height: number
+        width: number | 'auto'
+        height: number | 'auto'
         text?: string
         src?: string
         background?: string
@@ -45,10 +39,12 @@ export interface EditorElement {
         fontSize?: number
         borderRadius?: number
         // Layout
-        display?: 'flex' | 'block'
+        display?: 'flex' | 'block' | 'grid'
         flexDirection?: 'row' | 'column'
+        gridTemplateColumns?: string
+        gridTemplateRows?: string
         alignItems?: 'start' | 'center' | 'end' | 'stretch'
-        justifyContent?: 'start' | 'center' | 'end' | 'between' | 'around'
+        justifyContent?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly' | 'stretch'
         gap?: number
         padding?: number | string
         // Typography
@@ -67,6 +63,12 @@ interface CameraState {
     y: number
 }
 
+interface InteractionState {
+    mode: 'idle' | 'dragging' | 'resizing' | 'panning' | 'marquee'
+    activeId?: string
+    handle?: string
+}
+
 interface ArtboardState {
     width: number
     height: number
@@ -81,14 +83,15 @@ interface LayoutState {
 }
 
 interface HistoryState {
-    past: { elements: EditorElement[]; artboard: ArtboardState }[]
-    future: { elements: EditorElement[]; artboard: ArtboardState }[]
+    past: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
+    future: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
 }
 
 interface EditorState {
     // Elements
-    elements: EditorElement[]
+    elements: Record<string, EditorElement>
     selectedId: string | null
+    interactionState: InteractionState
 
     // Camera (Spatial Viewport)
     camera: CameraState
@@ -106,9 +109,10 @@ interface EditorState {
     theme: 'dark' | 'light'
 
     hoveredElementId: string | null
-    draggingId: string | null
+    insertIndex: number | null
 
     // Actions
+    setInteractionMode: (mode: InteractionState['mode'], activeId?: string, handle?: string) => void
     addElement: (element: EditorElement) => void
     addElements: (elements: EditorElement[]) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
@@ -117,7 +121,10 @@ interface EditorState {
     reparentElement: (id: string, newParentId?: string) => void
     setSelectedId: (id: string | null) => void
     setHoveredElementId: (id: string | null) => void
-    setDraggingId: (id: string | null) => void
+
+    // Text Editing
+    editingId: string | null
+    setEditingId: (id: string | null) => void
 
     saveHistory: () => void
     undo: () => void
@@ -136,6 +143,8 @@ interface EditorState {
     // Sidebar Tabbing
     leftSidebarTab: 'layers' | 'assets' | 'sections'
     setLeftSidebarTab: (tab: 'layers' | 'assets' | 'sections') => void
+    reorderElement: (id: string, newParentId: string, newIndex: number) => void
+    setInsertIndex: (index: number | null) => void
 }
 
 const MAX_HISTORY = 100
@@ -143,25 +152,7 @@ const MAX_HISTORY = 100
 /**
  * Initial set of elements for the landing page demo.
  */
-const INITIAL_ELEMENTS: EditorElement[] = [
-    { id: 'card-1', type: 'container', props: { x: 120, y: 188, width: 588, height: 524, background: '#ffffff', borderRadius: 24 } },
-    { id: 'card-1-title', type: 'text', parentId: 'card-1', props: { x: 152, y: 220, width: 524, height: 32, text: 'Revenue Recovery Dashboard', color: '#111827', fontSize: 20 } },
-    { id: 'card-1-desc', type: 'text', parentId: 'card-1', props: { x: 152, y: 252, width: 524, height: 48, text: 'Track every dollar saved with our automated recovery workflows.', color: '#6b7280', fontSize: 14 } },
-    { id: 'card-1-amount', type: 'text', parentId: 'card-1', props: { x: 152, y: 316, width: 300, height: 64, text: '$142,580', color: '#10b981', fontSize: 48 } },
-    { id: 'card-2', type: 'container', props: { x: 732, y: 188, width: 588, height: 250, background: '#ffffff', borderRadius: 24 } },
-    { id: 'card-2-title', type: 'text', parentId: 'card-2', props: { x: 764, y: 220, width: 400, height: 32, text: 'Automate 90% of Support', color: '#111827', fontSize: 20 } },
-    { id: 'card-2-chat-1', type: 'container', parentId: 'card-2', props: { x: 920, y: 260, width: 360, height: 40, background: '#4f46e5', borderRadius: 12 } },
-    { id: 'card-2-chat-1-text', type: 'text', parentId: 'card-2-chat-1', props: { x: 920, y: 260, width: 360, height: 40, text: 'Hi! I noticed your payment failed.', color: '#ffffff', fontSize: 12 } },
-    { id: 'card-2-chat-2', type: 'container', parentId: 'card-2', props: { x: 800, y: 310, width: 360, height: 40, background: '#f3f4f6', borderRadius: 12 } },
-    { id: 'card-2-chat-2-text', type: 'text', parentId: 'card-2-chat-2', props: { x: 800, y: 310, width: 360, height: 40, text: 'Yes please, that would be great!', color: '#1f2937', fontSize: 12 } },
-    { id: 'card-3', type: 'container', props: { x: 732, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 } },
-    { id: 'card-3-title', type: 'text', parentId: 'card-3', props: { x: 748, y: 494, width: 250, height: 32, text: 'Plays well with others', color: '#111827', fontSize: 16 } },
-    { id: 'card-4', type: 'container', props: { x: 1038, y: 462, width: 282, height: 250, background: '#ffffff', borderRadius: 24 } },
-    { id: 'card-4-title', type: 'text', parentId: 'card-4', props: { x: 1054, y: 494, width: 250, height: 32, text: 'Sub-second Response', color: '#111827', fontSize: 16 } },
-    { id: 'card-4-metric', type: 'text', parentId: 'card-4', props: { x: 1054, y: 550, width: 250, height: 80, text: '0.8s', color: '#4f46e5', fontSize: 64 } },
-    { id: 'card-4-pulse-dot', type: 'div', parentId: 'card-4', props: { x: 1054, y: 640, width: 10, height: 10, background: '#10b981', borderRadius: 5 } },
-    { id: 'card-4-pulse-text', type: 'text', parentId: 'card-4', props: { x: 1070, y: 640, width: 100, height: 16, text: 'LIVE STATUS', color: '#059669', fontSize: 12 } }
-]
+const INITIAL_ELEMENTS: Record<string, EditorElement> = {}
 
 export const useEditorStore = create<EditorState>()(
     persist(
@@ -171,12 +162,19 @@ export const useEditorStore = create<EditorState>()(
 
             camera: { scale: 1, x: 0, y: 0 },
             artboard: { width: 1440, height: 900, background: '#f9fafb' },
-            layout: { leftWidth: 240, rightWidth: 280, isLeftCollapsed: false, isRightCollapsed: false },
+            layout: { leftWidth: 240, rightWidth: 360, isLeftCollapsed: false, isRightCollapsed: false },
             history: { past: [], future: [] },
             theme: 'dark',
             leftSidebarTab: 'layers',
             hoveredElementId: null,
-            draggingId: null,
+            insertIndex: null,
+            editingId: null,
+            setEditingId: (id) => set({ editingId: id }),
+
+            interactionState: { mode: 'idle' },
+
+            setInteractionMode: (mode, activeId, handle) =>
+                set({ interactionState: { mode, activeId, handle } }),
 
             setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
@@ -185,87 +183,116 @@ export const useEditorStore = create<EditorState>()(
              */
             saveHistory: () => {
                 const { elements, artboard, history } = get()
-                const newPast = [...history.past, { elements: JSON.parse(JSON.stringify(elements)), artboard: { ...artboard } }]
+                const snapshot = structuredClone({ elements, artboard })
+                const newPast = [...history.past, snapshot]
                 if (newPast.length > MAX_HISTORY) newPast.shift()
                 set({ history: { past: newPast, future: [] } })
             },
 
             addElement: (element) => {
                 get().saveHistory()
-                set((state) => ({ elements: [...state.elements, element] }))
+                set((state) => ({
+                    elements: { ...state.elements, [element.id]: element }
+                }))
             },
 
             addElements: (elements) => {
                 get().saveHistory()
-                set((state) => ({ elements: [...state.elements, ...elements] }))
+                set((state) => {
+                    const newElements = { ...state.elements }
+                    elements.forEach(el => {
+                        newElements[el.id] = el
+                    })
+                    return { elements: newElements }
+                })
             },
 
             updateElement: (id, props) => {
-                set((state) => ({
-                    elements: state.elements.map((el) =>
-                        el.id === id ? { ...el, props: { ...el.props, ...props } } : el
-                    ),
-                }))
+                set((state) => {
+                    const element = state.elements[id]
+                    if (!element) return state
+                    return {
+                        elements: {
+                            ...state.elements,
+                            [id]: { ...element, props: { ...element.props, ...props } }
+                        }
+                    }
+                })
             },
 
             updateElements: (updates) => {
-                set((state) => ({
-                    elements: state.elements.map((el) => {
-                        const update = updates.find((u) => u.id === el.id)
-                        return update ? { ...el, props: { ...el.props, ...update.props } } : el
-                    }),
-                }))
+                set((state) => {
+                    const newElements = { ...state.elements }
+                    updates.forEach(update => {
+                        const element = newElements[update.id]
+                        if (element) {
+                            newElements[update.id] = { ...element, props: { ...element.props, ...update.props } }
+                        }
+                    })
+                    return { elements: newElements }
+                })
             },
 
             removeElement: (id) => {
                 get().saveHistory()
-                set((state) => ({
-                    elements: state.elements.filter((el) => el.id !== id),
-                    selectedId: state.selectedId === id ? null : state.selectedId,
-                }))
+                set((state) => {
+                    // Collect all descendant IDs recursively
+                    const toDelete = new Set<string>()
+                    const collect = (elId: string) => {
+                        toDelete.add(elId)
+                        Object.values(state.elements).forEach(el => {
+                            if (el.parentId === elId) collect(el.id)
+                        })
+                    }
+                    collect(id)
+                    const remaining = Object.fromEntries(
+                        Object.entries(state.elements).filter(([k]) => !toDelete.has(k))
+                    )
+                    return {
+                        elements: remaining,
+                        selectedId: toDelete.has(state.selectedId ?? '') ? null : state.selectedId,
+                    }
+                })
             },
 
             setSelectedId: (id) => set({ selectedId: id }),
 
             reparentElement: (id, newParentId) => {
                 const state = get()
-                const element = state.elements.find(el => el.id === id)
+                const element = state.elements[id]
                 if (!element || element.parentId === newParentId) return
 
                 get().saveHistory()
 
                 // Calculate absolute position before change
-                const absX = getAbsoluteX(element, state.elements)
-                const absY = getAbsoluteY(element, state.elements)
+                const { x: absX, y: absY } = getAbsolutePosition(element, state.elements)
 
                 let newX = absX
                 let newY = absY
 
                 if (newParentId) {
-                    const newParent = state.elements.find(el => el.id === newParentId)
+                    const newParent = state.elements[newParentId]
                     if (newParent) {
-                        const parentAbsX = getAbsoluteX(newParent, state.elements)
-                        const parentAbsY = getAbsoluteY(newParent, state.elements)
+                        const { x: parentAbsX, y: parentAbsY } = getAbsolutePosition(newParent, state.elements)
                         newX = absX - parentAbsX
                         newY = absY - parentAbsY
                     }
                 }
 
                 set((state) => ({
-                    elements: state.elements.map((el) =>
-                        el.id === id
-                            ? {
-                                ...el,
-                                parentId: newParentId,
-                                props: { ...el.props, x: newX, y: newY }
-                            }
-                            : el
-                    ),
+                    elements: {
+                        ...state.elements,
+                        [id]: {
+                            ...element,
+                            parentId: newParentId,
+                            props: { ...element.props, x: newX, y: newY }
+                        }
+                    }
                 }))
             },
 
             setHoveredElementId: (id) => set({ hoveredElementId: id }),
-            setDraggingId: (id) => set({ draggingId: id }),
+            setInsertIndex: (index) => set({ insertIndex: index }),
 
             /**
              * Performs a state undo by popping the last history entry.
@@ -277,10 +304,10 @@ export const useEditorStore = create<EditorState>()(
                 const previous = past[past.length - 1]
                 const newPast = past.slice(0, past.length - 1)
 
-                const current = {
-                    elements: JSON.parse(JSON.stringify(get().elements)),
-                    artboard: { ...get().artboard }
-                }
+                const current = structuredClone({
+                    elements: get().elements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: previous.elements,
@@ -302,10 +329,10 @@ export const useEditorStore = create<EditorState>()(
                 const next = future[0]
                 const newFuture = future.slice(1)
 
-                const current = {
-                    elements: JSON.parse(JSON.stringify(get().elements)),
-                    artboard: { ...get().artboard }
-                }
+                const current = structuredClone({
+                    elements: get().elements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: next.elements,
@@ -366,7 +393,7 @@ export const useEditorStore = create<EditorState>()(
                 set((state) => ({
                     layout: {
                         ...state.layout,
-                        rightWidth: Math.min(480, Math.max(240, width))
+                        rightWidth: Math.min(480, Math.max(360, width))
                     }
                 })),
 
@@ -381,10 +408,56 @@ export const useEditorStore = create<EditorState>()(
                 })),
 
             setTheme: (theme) => set({ theme }),
+
+            reorderElement: (id, newParentId, newIndex) => {
+                get().saveHistory()
+                const state = get()
+                const element = state.elements[id]
+                if (!element) return
+
+                const oldParentId = element.parentId
+
+                // Get all siblings in the new parent
+                const siblings = Object.values(state.elements)
+                    .filter(el => el.parentId === newParentId && el.id !== id)
+                    .sort((a, b) => (a.index || 0) - (b.index || 0))
+
+                // Insert into new position
+                siblings.splice(newIndex, 0, element)
+
+                // Update all affected indices
+                const updates: Record<string, Partial<EditorElement>> = {}
+                siblings.forEach((el, idx) => {
+                    if (el.index !== idx || el.parentId !== newParentId || el.id === id) { // Include the moved element itself to update parentId
+                        updates[el.id] = { index: idx, parentId: newParentId }
+                    }
+                })
+
+                // If moved from another parent, re-index the old parent's children to fill the gap
+                if (oldParentId && oldParentId !== newParentId) {
+                    const oldSiblings = Object.values(state.elements)
+                        .filter(el => el.parentId === oldParentId && el.id !== id)
+                        .sort((a, b) => (a.index || 0) - (b.index || 0))
+
+                    oldSiblings.forEach((el, idx) => {
+                        if (el.index !== idx) {
+                            updates[el.id] = { ...updates[el.id], index: idx } // Merge if somehow overlapping, though unlikely for different parents
+                        }
+                    })
+                }
+
+                set(state => {
+                    const newElements = { ...state.elements }
+                    Object.entries(updates).forEach(([elId, changes]) => {
+                        newElements[elId] = { ...newElements[elId], ...changes }
+                    })
+                    return { elements: newElements }
+                })
+            }
         }),
         {
             name: 'editor-storage',
-            version: 2, // Bumped for history state schema change
+            version: 5, // Bumped for layout width adjustments (360px)
         }
     )
 )

@@ -217,7 +217,7 @@ function RootDocument() {
                   isCollapsed={isRightCollapsed}
                   onToggleCollapse={toggleRightCollapse}
                 >
-                  <div className="p-1 border-b border-border flex gap-1 bg-background/30 mx-2 mt-2 rounded">
+                  <div className="shrink-0 p-1 border-b border-border flex gap-1 bg-background/30 mx-2 mt-2 rounded">
                     <SidebarTab
                       label="Design"
                       active

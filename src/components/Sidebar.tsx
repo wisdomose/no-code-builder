@@ -63,10 +63,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      <div
-        className={`flex-1 overflow-auto no-scrollbar ${isCollapsed ? "hidden" : "block"}`}
-      >
-        {children}
+      <div className={`flex-1 relative ${isCollapsed ? "hidden" : "block"}`}>
+        <div className="absolute inset-0 flex flex-col overflow-hidden">
+          {children}
+        </div>
       </div>
 
       {isCollapsed && (
