@@ -12,7 +12,11 @@ import {
 import { useEditorStore } from "@/lib/useEditorStore";
 
 export const Header: React.FC = () => {
-  const { theme, setTheme, camera, undo, redo } = useEditorStore();
+  const theme = useEditorStore((s) => s.theme);
+  const setTheme = useEditorStore((s) => s.setTheme);
+  const scale = useEditorStore((s) => s.camera.scale);
+  const undo = useEditorStore((s) => s.undo);
+  const redo = useEditorStore((s) => s.redo);
 
   return (
     <header className="h-14 border-b border-border flex items-center px-4 shrink-0 justify-between bg-surface z-[100] select-none">
@@ -59,7 +63,7 @@ export const Header: React.FC = () => {
             1440 <span className="text-[9px] opacity-40">PX</span>
           </span>
           <span className="text-primary font-bold">
-            {Math.round(camera.scale * 100)}%
+            {Math.round(scale * 100)}%
           </span>
         </div>
       </div>

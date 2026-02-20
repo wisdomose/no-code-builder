@@ -1,49 +1,43 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
-import type { EditorElement } from "@/lib/useEditorStore";
+import { collectDescendants, cloneElement } from "@/lib/elementUtils";
 
 interface CanvasProps {
   children: React.ReactNode;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ children }) => {
-  const { setCamera, setSelectedId } = useEditorStore();
+  const setCamera = useEditorStore((s) => s.setCamera);
+  const setSelectedId = useEditorStore((s) => s.setSelectedId);
+  const camera = useEditorStore((s) => s.camera);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
 
-  // #13 fix: read camera from store directly to avoid stale closure
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       e.preventDefault();
-      const camera = useEditorStore.getState().camera;
+      const cam = useEditorStore.getState().camera;
 
       if (e.ctrlKey || e.metaKey) {
-        const delta = -e.deltaY;
-        const scaleChange = delta > 0 ? 1.1 : 0.9;
-        const newScale = Math.min(
-          4,
-          Math.max(0.25, camera.scale * scaleChange),
-        );
+        const scaleChange = -e.deltaY > 0 ? 1.1 : 0.9;
+        const newScale = Math.min(4, Math.max(0.25, cam.scale * scaleChange));
 
         if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
           const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
-
-          const newX = mouseX - (mouseX - camera.x) * (newScale / camera.scale);
-          const newY = mouseY - (mouseY - camera.y) * (newScale / camera.scale);
-
-          setCamera({ scale: newScale, x: newX, y: newY });
+          const ratio = newScale / cam.scale;
+          setCamera({
+            scale: newScale,
+            x: mouseX - (mouseX - cam.x) * ratio,
+            y: mouseY - (mouseY - cam.y) * ratio,
+          });
         }
       } else {
-        // #3 fix: functional update reads latest camera so panning stays smooth
-        setCamera({
-          x: camera.x - e.deltaX,
-          y: camera.y - e.deltaY,
-        });
+        setCamera({ x: cam.x - e.deltaX, y: cam.y - e.deltaY });
       }
     },
-    [setCamera], // stable dep — no camera closure
+    [setCamera],
   );
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -55,15 +49,11 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
     }
   };
 
-  // #3 fix: read camera from store to avoid stale closure during fast pan
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isPanning.current) return;
-      const camera = useEditorStore.getState().camera;
-      setCamera({
-        x: camera.x + e.movementX,
-        y: camera.y + e.movementY,
-      });
+      const cam = useEditorStore.getState().camera;
+      setCamera({ x: cam.x + e.movementX, y: cam.y + e.movementY });
     },
     [setCamera],
   );
@@ -73,53 +63,19 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
     document.body.style.cursor = "default";
   }, []);
 
-  // Helper: recursively collect all descendants
-  function collectDescendants(
-    parentId: string,
-    elements: Record<string, EditorElement>,
-  ): EditorElement[] {
-    const children = Object.values(elements).filter(
-      (el) => el.parentId === parentId,
-    );
-    return children.flatMap((child) => [
-      child,
-      ...collectDescendants(child.id, elements),
-    ]);
-  }
-
-  // Helper: deep-clone an element with a new ID, optionally reparenting
-  function cloneElement(
-    el: EditorElement,
-    newId: string,
-    newParentId: string | undefined,
-    offsetX: number,
-    offsetY: number,
-  ): EditorElement {
-    return {
-      ...el,
-      id: newId,
-      parentId: newParentId,
-      props: {
-        ...el.props,
-        x: el.props.x + offsetX,
-        y: el.props.y + offsetY,
-      },
-    };
-  }
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const state = useEditorStore.getState();
-      const selectedId = state.selectedId;
+      const { selectedId } = state;
       if (!selectedId) return;
 
+      const active = document.activeElement;
       if (
-        document.activeElement instanceof HTMLInputElement ||
-        document.activeElement instanceof HTMLTextAreaElement ||
-        (document.activeElement as HTMLElement)?.contentEditable === "true"
-      ) {
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active as HTMLElement)?.contentEditable === "true"
+      )
         return;
-      }
 
       switch (e.key) {
         case "Delete":
@@ -138,10 +94,9 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
           e.preventDefault();
           const el = state.elements[selectedId];
           if (!el) break;
-          // #1 fix: save history before nudge so each nudge is undoable
           state.saveHistory();
           const step = e.shiftKey ? 10 : 1;
-          const updates =
+          const delta =
             e.key === "ArrowUp"
               ? { y: el.props.y - step }
               : e.key === "ArrowDown"
@@ -149,89 +104,71 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
                 : e.key === "ArrowLeft"
                   ? { x: el.props.x - step }
                   : { x: el.props.x + step };
-          state.updateElement(selectedId, updates);
+          state.updateElement(selectedId, delta);
           break;
         }
 
         case "d": {
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            const src = state.elements[selectedId];
-            if (!src) break;
+          if (!(e.ctrlKey || e.metaKey)) break;
+          e.preventDefault();
+          const src = state.elements[selectedId];
+          if (!src) break;
 
-            // #4 fix: recursively clone all descendants
-            const descendants = collectDescendants(selectedId, state.elements);
+          const descendants = collectDescendants(selectedId, state.elements);
+          const makeId = () =>
+            `${src.type}-${Math.random().toString(36).slice(2, 11)}`;
 
-            // Build an ID mapping: old ID → new ID
-            const idMap = new Map<string, string>();
-            const makeId = (el: EditorElement) =>
-              `${el.type}-${Math.random().toString(36).substr(2, 9)}`;
+          const idMap = new Map<string, string>([[selectedId, makeId()]]);
+          for (const el of descendants) idMap.set(el.id, makeId());
 
-            const newRootId = makeId(src);
-            idMap.set(selectedId, newRootId);
-            descendants.forEach((el) => idMap.set(el.id, makeId(el)));
-
-            const clones: EditorElement[] = [
-              cloneElement(src, newRootId, src.parentId, 20, 20),
-              ...descendants.map((el) =>
-                // descendants keep relative positions (no offset)
-                cloneElement(
-                  el,
-                  idMap.get(el.id)!,
-                  idMap.get(el.parentId!)!,
-                  0,
-                  0,
-                ),
+          const newRootId = idMap.get(selectedId)!;
+          const clones = [
+            cloneElement(src, newRootId, src.parentId, 20, 20),
+            ...descendants.map((el) =>
+              cloneElement(
+                el,
+                idMap.get(el.id)!,
+                idMap.get(el.parentId!)!,
+                0,
+                0,
               ),
-            ];
+            ),
+          ];
 
-            state.addElements(clones);
-            state.setSelectedId(newRootId);
-          }
+          state.addElements(clones);
+          state.setSelectedId(newRootId);
           break;
         }
 
-        case "z": {
+        case "z":
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
-            if (e.shiftKey) {
-              state.redo();
-            } else {
-              state.undo();
-            }
+            e.shiftKey ? state.redo() : state.undo();
           }
           break;
-        }
 
-        case "y": {
+        case "y":
           if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
             state.redo();
           }
           break;
-        }
       }
     };
 
     const container = containerRef.current;
-    if (container) {
-      container.addEventListener("wheel", handleWheel, { passive: false });
-    }
+    container?.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      if (container) {
-        container.removeEventListener("wheel", handleWheel);
-      }
+      container?.removeEventListener("wheel", handleWheel);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleWheel, handleMouseMove, handleMouseUp, setSelectedId]);
-
-  const camera = useEditorStore((s) => s.camera);
 
   return (
     <div

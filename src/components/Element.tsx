@@ -3,6 +3,12 @@ import { createPortal } from "react-dom";
 import { useEditorStore } from "@/lib/useEditorStore";
 import type { EditorElement as IEditorElement } from "@/lib/useEditorStore";
 import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
+import { collectDescendants } from "@/lib/elementUtils";
+import { Z } from "@/lib/layers";
+
+function resolveBorderStyle(style?: string, width?: number) {
+  return style ?? (width ? "solid" : undefined);
+}
 
 interface ElementProps {
   element: IEditorElement;
@@ -73,7 +79,6 @@ TextEditor.displayName = "TextEditor";
 
 // --- Hooks ---
 
-/** #10: Granular drag hook — isolates drag logic and reads store fields it needs */
 function useElementDrag(
   element: IEditorElement,
   isParentFlow: boolean,
@@ -81,23 +86,10 @@ function useElementDrag(
 ) {
   const setSelectedId = useEditorStore((s) => s.setSelectedId);
 
-  function getAllChildren(
-    allElements: Record<string, IEditorElement>,
-    parentId: string,
-  ): IEditorElement[] {
-    const children = Object.values(allElements)
-      .filter((el) => el.parentId === parentId)
-      .sort((a, b) => (a.index || 0) - (b.index || 0));
-    return children.concat(
-      children.flatMap((child) => getAllChildren(allElements, child.id)),
-    );
-  }
-
   const handleMouseDown = (e: React.MouseEvent) => {
     const store = useEditorStore.getState();
     if (store.editingId === element.id) return;
     if (e.button !== 0) return;
-    // #Phase2: block interaction when locked
     if (element.locked) return;
     e.stopPropagation();
 
@@ -135,7 +127,7 @@ function useElementDrag(
 
     const affectedElements = [
       element,
-      ...getAllChildren(currentElements, element.id),
+      ...collectDescendants(element.id, currentElements),
     ];
     const affectedIds = new Set(affectedElements.map((el) => el.id));
 
@@ -149,7 +141,6 @@ function useElementDrag(
     }));
 
     let isDragStarted = false;
-    // #12: RAF throttle for drop-target detection
     let rafId: number | null = null;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -217,7 +208,6 @@ function useElementDrag(
       }));
       store.updateElements(updates);
 
-      // #12: RAF-throttle the expensive drop-target detection
       if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
@@ -347,126 +337,29 @@ function useElementDrag(
   return { handleMouseDown };
 }
 
-/** #8 extracted resize hook */
-function useElementResize(element: IEditorElement) {
-  const handleResizeMouseDown = (e: React.MouseEvent, dir: string) => {
-    e.stopPropagation();
-    const store = useEditorStore.getState();
-    store.saveHistory();
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startW =
-      typeof element.props.width === "number" ? element.props.width : 100;
-    const startH =
-      typeof element.props.height === "number" ? element.props.height : 100;
-    const startEX = element.props.x;
-    const startEY = element.props.y;
-
-    const handleResize = (moveEvent: MouseEvent) => {
-      const state = useEditorStore.getState();
-      const currentCamera = state.camera;
-      let dx = (moveEvent.clientX - startX) / currentCamera.scale;
-      let dy = (moveEvent.clientY - startY) / currentCamera.scale;
-
-      // ── Snap during resize ────────────────────────────────────────────────
-      const { artboard, elements: allEls } = state;
-      const artboardH = computeArtboardHeight(allEls, artboard.height);
-
-      // Build the proposed rect after applying raw delta to the moving edges
-      let propX = startEX;
-      let propY = startEY;
-      let propW = startW;
-      let propH = startH;
-      if (dir.includes("e")) propW = Math.max(10, startW + dx);
-      if (dir.includes("s")) propH = Math.max(10, startH + dy);
-      if (dir.includes("w")) {
-        propW = Math.max(10, startW - dx);
-        propX = startEX + (startW - propW);
-      }
-      if (dir.includes("n")) {
-        propH = Math.max(10, startH - dy);
-        propY = startEY + (startH - propH);
-      }
-
-      const peers = Object.values(allEls).filter(
-        (el) => !el.parentId && el.id !== element.id,
-      );
-
-      const snap = getSnapResult(
-        { x: propX, y: propY, w: propW, h: propH },
-        artboard.width,
-        artboardH,
-        peers,
-      );
-
-      // Apply snap corrections to the moving edge(s) only
-      if (dir.includes("e") || dir.includes("w")) dx += snap.dx;
-      if (dir.includes("s") || dir.includes("n")) dy += snap.dy;
-      state.setSnapLines(snap.lines);
-      // ─────────────────────────────────────────────────────────────────────
-
-      const updates: Partial<IEditorElement["props"]> = {};
-
-      if (dir.includes("e"))
-        updates.width = Math.max(10, Math.round(startW + dx));
-      if (dir.includes("s"))
-        updates.height = Math.max(10, Math.round(startH + dy));
-      if (dir.includes("w")) {
-        const newW = Math.max(10, startW - dx);
-        updates.width = newW;
-        updates.x = startEX + (startW - newW);
-      }
-      if (dir.includes("n")) {
-        const newH = Math.max(10, startH - dy);
-        updates.height = newH;
-        updates.y = startEY + (startH - newH);
-      }
-
-      useEditorStore.getState().updateElement(element.id, updates);
-    };
-
-    const stopResize = () => {
-      window.removeEventListener("mousemove", handleResize);
-      window.removeEventListener("mouseup", stopResize);
-      // Clear snap guides
-      useEditorStore.getState().setSnapLines([]);
-    };
-
-    window.addEventListener("mousemove", handleResize);
-    window.addEventListener("mouseup", stopResize);
-  };
-
-  return { handleResizeMouseDown };
-}
-
 // --- Main Component ---
 
 export const Element: React.FC<ElementProps> = React.memo(
   ({ element: initialElement }) => {
-    // #10: Granular selectors — only re-renders when THIS element's data changes
     const element = useEditorStore(
       (s) => s.elements[initialElement.id] || initialElement,
     );
-    const isSelected = useEditorStore((s) => s.selectedId === element.id);
     const isEditing = useEditorStore((s) => s.editingId === element.id);
-    const isHoveredAsParent = useEditorStore(
-      (s) => s.hoveredElementId === element.id,
-    );
     const isDragging = useEditorStore(
       (s) =>
         s.interactionState.mode === "dragging" &&
         s.interactionState.activeId === element.id,
     );
     const insertIndex = useEditorStore((s) => s.insertIndex);
-    const cameraScale = useEditorStore((s) => s.camera.scale);
+    const isHoveredAsParent = useEditorStore(
+      (s) => s.hoveredElementId === element.id,
+    );
     const setEditingId = useEditorStore((s) => s.setEditingId);
     const updateElement = useEditorStore((s) => s.updateElement);
 
     // Phase 2: visibility
     if (element.visible === false) return null;
 
-    // #11: Memoize child elements to avoid O(n) on every render
     const elements = useEditorStore((s) => s.elements);
     const directChildren = React.useMemo(
       () =>
@@ -481,7 +374,6 @@ export const Element: React.FC<ElementProps> = React.memo(
       parent?.props.display === "flex" || parent?.props.display === "grid";
 
     const { handleMouseDown } = useElementDrag(element, isParentFlow, parent);
-    const { handleResizeMouseDown } = useElementResize(element);
 
     const renderContent = () => {
       const { type, props } = element;
@@ -545,9 +437,10 @@ export const Element: React.FC<ElementProps> = React.memo(
                   ? `${props.borderWidth}px`
                   : undefined,
                 borderColor: props.borderColor,
-                borderStyle:
-                  props.borderStyle ||
-                  (props.borderWidth ? "solid" : undefined),
+                borderStyle: resolveBorderStyle(
+                  props.borderStyle,
+                  props.borderWidth,
+                ),
                 fontSize: `${props.fontSize || 14}px`,
                 fontFamily: props.fontFamily,
                 fontWeight: props.fontWeight,
@@ -570,9 +463,10 @@ export const Element: React.FC<ElementProps> = React.memo(
                   ? `${props.borderWidth}px`
                   : undefined,
                 borderColor: props.borderColor,
-                borderStyle:
-                  props.borderStyle ||
-                  (props.borderWidth ? "solid" : undefined),
+                borderStyle: resolveBorderStyle(
+                  props.borderStyle,
+                  props.borderWidth,
+                ),
                 opacity: props.opacity,
                 boxShadow: props.boxShadow,
               }}
@@ -601,9 +495,10 @@ export const Element: React.FC<ElementProps> = React.memo(
                   ? `${props.borderWidth}px`
                   : undefined,
                 borderColor: props.borderColor,
-                borderStyle:
-                  props.borderStyle ||
-                  (props.borderWidth ? "solid" : undefined),
+                borderStyle: resolveBorderStyle(
+                  props.borderStyle,
+                  props.borderWidth,
+                ),
                 border:
                   !props.background &&
                   !props.borderWidth &&
@@ -672,59 +567,27 @@ export const Element: React.FC<ElementProps> = React.memo(
             element.props.height === "auto"
               ? "auto"
               : `${element.props.height}px`,
-          zIndex: isDragging ? 200 : element.props.zIndex || 1,
+          zIndex: isDragging
+            ? Z.DRAG_GHOST
+            : (element.props.zIndex ?? Z.ELEMENT),
           flexShrink: 0,
           alignSelf: element.props.alignSelf,
           transform: element.props.transform,
           cursor: element.locked ? "not-allowed" : "default",
         }}
         className={`
-        group pointer-events-auto
-        ${isSelected ? "ring-1 ring-[#007aff] z-[100]" : "hover:ring-1 hover:ring-[#007aff]/50"}
-        ${isHoveredAsParent ? "ring-2 ring-emerald-500 bg-emerald-500/5 z-[90]" : ""}
+        pointer-events-auto
         ${isDragging ? "pointer-events-none opacity-50" : ""}
-        transition-[ring,background-color,opacity] duration-150
+        transition-opacity duration-150
         cursor-default
       `}
       >
         {renderContent()}
-
-        {/* Selection Chrome */}
-        {isSelected && (
-          <>
-            <div className="absolute -inset-[1px] border border-[#007aff] pointer-events-none" />
-
-            {["nw", "n", "ne", "w", "e", "sw", "s", "se"].map((dir) => {
-              const isCorner = dir.length === 2;
-              return (
-                <div
-                  key={dir}
-                  onMouseDown={(e) => handleResizeMouseDown(e, dir)}
-                  style={{
-                    transform: `translate(-50%, -50%) scale(${1 / cameraScale})`,
-                  }}
-                  className={`
-                  absolute w-[6px] h-[6px] bg-white border border-[#007aff] z-[110]
-                  ${dir.includes("n") ? "top-0" : ""}
-                  ${dir.includes("s") ? "top-full" : ""}
-                  ${dir.includes("w") ? "left-0" : ""}
-                  ${dir.includes("e") ? "left-full" : ""}
-                  ${dir === "n" || dir === "s" ? "left-1/2" : ""}
-                  ${dir === "w" || dir === "e" ? "top-1/2" : ""}
-                  ${dir === "nw" || dir === "se" ? "cursor-nwse-resize" : ""}
-                  ${dir === "ne" || dir === "sw" ? "cursor-nesw-resize" : ""}
-                  ${dir === "n" || dir === "s" ? "cursor-ns-resize" : ""}
-                  ${dir === "w" || dir === "e" ? "cursor-ew-resize" : ""}
-                  ${isCorner ? "" : "hidden group-hover:block"}
-                `}
-                />
-              );
-            })}
-          </>
-        )}
       </div>
     );
 
+    // Portal the dragged element to artboard root so it renders at
+    // artboard-absolute coordinates, escaping parent overflow/stacking.
     if (isDragging) {
       const artboardNode = document.querySelector('[data-artboard="true"]');
       if (artboardNode) {

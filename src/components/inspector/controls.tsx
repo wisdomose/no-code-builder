@@ -55,6 +55,7 @@ export function Control({
   label,
   value,
   onChange,
+  onToggleAuto,
   readOnly,
   min,
   max,
@@ -63,6 +64,7 @@ export function Control({
   label: string;
   value: number | string | "auto";
   onChange?: (v: number | "auto") => void;
+  onToggleAuto?: () => void;
   readOnly?: boolean;
   min?: number;
   max?: number;
@@ -85,7 +87,7 @@ export function Control({
       label === "W" ||
       label === "H") &&
     !readOnly &&
-    onChange;
+    (onChange || onToggleAuto);
 
   return (
     <div className="flex flex-col gap-1.5 min-w-0 group relative">
@@ -122,7 +124,10 @@ export function Control({
         />
         {showAutoToggle && (
           <button
-            onClick={() => onChange!(isAuto ? 100 : "auto")}
+            onClick={() => {
+              if (onToggleAuto) onToggleAuto();
+              else onChange!(isAuto ? 100 : "auto");
+            }}
             className={`
               mr-1 px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider transition-colors shrink-0
               ${isAuto ? "bg-primary text-white" : "bg-border/50 text-text-muted hover:bg-primary/20 hover:text-primary"}

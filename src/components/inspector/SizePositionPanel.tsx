@@ -38,12 +38,32 @@ export function SizePositionPanel({
           label="W"
           value={element.props.width}
           onChange={(v) => onPropChange("width", v)}
+          onToggleAuto={() => {
+            if (element.props.width === "auto") {
+              const node = document.querySelector(
+                `[data-element-id="${element.id}"]`,
+              ) as HTMLElement | null;
+              onPropChange("width", node ? node.offsetWidth : 100);
+            } else {
+              onPropChange("width", "auto");
+            }
+          }}
           min={1}
         />
         <Control
           label="H"
           value={element.props.height}
           onChange={(v) => onPropChange("height", v)}
+          onToggleAuto={() => {
+            if (element.props.height === "auto") {
+              const node = document.querySelector(
+                `[data-element-id="${element.id}"]`,
+              ) as HTMLElement | null;
+              onPropChange("height", node ? node.offsetHeight : 100);
+            } else {
+              onPropChange("height", "auto");
+            }
+          }}
           min={1}
         />
       </div>

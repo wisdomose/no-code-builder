@@ -2,13 +2,14 @@ import React, { useRef } from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
 import { Element as EditorElementComponent } from "./Element";
 import { SnapOverlay } from "./SnapOverlay";
+import { EditorOverlay } from "./EditorOverlay";
 
 export const Artboard: React.FC = () => {
   const artboard = useEditorStore((s) => s.artboard);
   const setArtboard = useEditorStore((s) => s.setArtboard);
   const setSelectedId = useEditorStore((s) => s.setSelectedId);
   const elements = useEditorStore((s) => s.elements);
-  const handleRef = useRef<HTMLDivElement>(null);
+  const artboardRef = useRef<HTMLDivElement>(null);
 
   const rootElements = React.useMemo(
     () =>
@@ -57,11 +58,13 @@ export const Artboard: React.FC = () => {
       {/* Artboard surface */}
       <div
         data-artboard="true"
+        ref={artboardRef}
         onMouseDown={handleArtboardMouseDown}
         style={{
           width: `${artboard.width}px`,
           height: `${artboard.height}px`,
           backgroundColor: artboard.background,
+          isolation: "isolate",
         }}
         className="relative shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.1)] outline outline-1 outline-black/5"
       >
@@ -71,11 +74,13 @@ export const Artboard: React.FC = () => {
 
         {/* Snap guide lines */}
         <SnapOverlay />
+
+        {/* Editor chrome: selection rings, resize handles, hover highlights */}
+        <EditorOverlay artboardRef={artboardRef} />
       </div>
 
       {/* ── Height resize handle ── */}
       <div
-        ref={handleRef}
         onMouseDown={handleHeightDragStart}
         style={{ width: `${artboard.width}px` }}
         className="relative h-3 flex items-center justify-center cursor-ns-resize group mt-0"

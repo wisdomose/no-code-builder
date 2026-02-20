@@ -2,7 +2,10 @@ import { create } from 'zustand'
 import type { SnapLine } from './useSnap'
 import { persist } from 'zustand/middleware'
 
-function getAbsolutePosition(
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns the artboard-absolute position of an element by summing ancestor offsets. */
+export function getAbsolutePosition(
     element: EditorElement,
     elements: Record<string, EditorElement>
 ): { x: number; y: number } {
@@ -19,6 +22,8 @@ function getAbsolutePosition(
     return { x, y }
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 /**
  * Core element types for the editor.
  */
@@ -27,7 +32,6 @@ export interface EditorElement {
     type: 'text' | 'image' | 'button' | 'container' | 'div'
     parentId?: string
     index?: number
-    // Element metadata
     name?: string
     visible?: boolean
     locked?: boolean
@@ -145,6 +149,8 @@ interface EditorState {
     addElements: (elements: EditorElement[]) => void
     updateElement: (id: string, props: Partial<EditorElement['props']>) => void
     updateElements: (updates: { id: string; props: Partial<EditorElement['props']> }[]) => void
+    /** Updates top-level element metadata (name, visible, locked) — not props. */
+    updateElementMeta: (id: string, meta: Partial<Pick<EditorElement, 'name' | 'visible' | 'locked'>>) => void
     removeElement: (id: string) => void
     reparentElement: (id: string, newParentId?: string) => void
     setSelectedId: (id: string | null) => void
@@ -177,9 +183,6 @@ interface EditorState {
 
 const MAX_HISTORY = 100
 
-/**
- * Initial set of elements for the landing page demo.
- */
 const INITIAL_ELEMENTS: Record<string, EditorElement> = {}
 
 export const useEditorStore = create<EditorState>()(
@@ -208,9 +211,6 @@ export const useEditorStore = create<EditorState>()(
 
             setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
-            /**
-             * Pushes current elements and artboard state into history.
-             */
             saveHistory: () => {
                 const { elements, artboard, history } = get()
                 const snapshot = structuredClone({ elements, artboard })
@@ -229,11 +229,9 @@ export const useEditorStore = create<EditorState>()(
             addElements: (elements) => {
                 get().saveHistory()
                 set((state) => {
-                    const newElements = { ...state.elements }
-                    elements.forEach(el => {
-                        newElements[el.id] = el
-                    })
-                    return { elements: newElements }
+                    const next = { ...state.elements }
+                    for (const el of elements) next[el.id] = el
+                    return { elements: next }
                 })
             },
 
@@ -252,31 +250,41 @@ export const useEditorStore = create<EditorState>()(
 
             updateElements: (updates) => {
                 set((state) => {
-                    const newElements = { ...state.elements }
-                    updates.forEach(update => {
-                        const element = newElements[update.id]
-                        if (element) {
-                            newElements[update.id] = { ...element, props: { ...element.props, ...update.props } }
-                        }
-                    })
-                    return { elements: newElements }
+                    const next = { ...state.elements }
+                    for (const { id, props } of updates) {
+                        const el = next[id]
+                        if (el) next[id] = { ...el, props: { ...el.props, ...props } }
+                    }
+                    return { elements: next }
+                })
+            },
+
+            updateElementMeta: (id, meta) => {
+                set((state) => {
+                    const el = state.elements[id]
+                    if (!el) return state
+                    return {
+                        elements: { ...state.elements, [id]: { ...el, ...meta } }
+                    }
                 })
             },
 
             removeElement: (id) => {
                 get().saveHistory()
                 set((state) => {
-                    // Collect all descendant IDs recursively
+                    // Single-pass BFS to collect all descendant IDs.
+                    const allEls = state.elements
                     const toDelete = new Set<string>()
-                    const collect = (elId: string) => {
-                        toDelete.add(elId)
-                        Object.values(state.elements).forEach(el => {
-                            if (el.parentId === elId) collect(el.id)
-                        })
+                    const queue = [id]
+                    while (queue.length) {
+                        const current = queue.pop()!
+                        toDelete.add(current)
+                        for (const el of Object.values(allEls)) {
+                            if (el.parentId === current) queue.push(el.id)
+                        }
                     }
-                    collect(id)
                     const remaining = Object.fromEntries(
-                        Object.entries(state.elements).filter(([k]) => !toDelete.has(k))
+                        Object.entries(allEls).filter(([k]) => !toDelete.has(k))
                     )
                     return {
                         elements: remaining,
@@ -294,7 +302,6 @@ export const useEditorStore = create<EditorState>()(
 
                 get().saveHistory()
 
-                // Calculate absolute position before change
                 const { x: absX, y: absY } = getAbsolutePosition(element, state.elements)
 
                 let newX = absX
@@ -309,9 +316,9 @@ export const useEditorStore = create<EditorState>()(
                     }
                 }
 
-                set((state) => ({
+                set((s) => ({
                     elements: {
-                        ...state.elements,
+                        ...s.elements,
                         [id]: {
                             ...element,
                             parentId: newParentId,
@@ -324,20 +331,13 @@ export const useEditorStore = create<EditorState>()(
             setHoveredElementId: (id) => set({ hoveredElementId: id }),
             setInsertIndex: (index) => set({ insertIndex: index }),
 
-            /**
-             * Performs a state undo by popping the last history entry.
-             */
             undo: () => {
                 const { past, future } = get().history
-                if (past.length === 0) return
+                if (!past.length) return
 
                 const previous = past[past.length - 1]
-                const newPast = past.slice(0, past.length - 1)
-
-                const current = structuredClone({
-                    elements: get().elements,
-                    artboard: get().artboard
-                })
+                const newPast = past.slice(0, -1)
+                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
 
                 set({
                     elements: previous.elements,
@@ -349,20 +349,12 @@ export const useEditorStore = create<EditorState>()(
                 })
             },
 
-            /**
-             * Performs a state redo by shifting the first future history entry.
-             */
             redo: () => {
                 const { past, future } = get().history
-                if (future.length === 0) return
+                if (!future.length) return
 
-                const next = future[0]
-                const newFuture = future.slice(1)
-
-                const current = structuredClone({
-                    elements: get().elements,
-                    artboard: get().artboard
-                })
+                const [next, ...newFuture] = future
+                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
 
                 set({
                     elements: next.elements,
@@ -377,30 +369,22 @@ export const useEditorStore = create<EditorState>()(
             setCamera: (camera) =>
                 set((state) => ({ camera: { ...state.camera, ...camera } })),
 
-            /**
-             * Resets the camera to center the artboard in the viewport.
-             * @param containerWidth Optional workspace width for centering logic.
-             * @param containerHeight Optional workspace height for centering logic.
-             */
             resetCamera: (containerWidth, containerHeight) => {
                 const { artboard } = get()
                 if (containerWidth && containerHeight) {
-                    const padding = 100 // 50px breathing room on each side
-                    const availableWidth = containerWidth - padding
-                    const availableHeight = containerHeight - padding
-
-                    // Calculate scale to fit artboard in available space, cap at 1.0 (100%)
+                    const padding = 100
                     const fitScale = Math.min(
                         1,
-                        availableWidth / artboard.width,
-                        availableHeight / artboard.height
+                        (containerWidth - padding) / artboard.width,
+                        (containerHeight - padding) / artboard.height
                     )
-
-                    // Center artboard at the calculated scale
-                    const x = (containerWidth - artboard.width * fitScale) / 2
-                    const y = (containerHeight - artboard.height * fitScale) / 2
-
-                    set({ camera: { scale: fitScale, x, y } })
+                    set({
+                        camera: {
+                            scale: fitScale,
+                            x: (containerWidth - artboard.width * fitScale) / 2,
+                            y: (containerHeight - artboard.height * fitScale) / 2,
+                        }
+                    })
                 } else {
                     set({ camera: { scale: 1, x: 0, y: 0 } })
                 }
@@ -413,18 +397,12 @@ export const useEditorStore = create<EditorState>()(
 
             setLeftWidth: (width) =>
                 set((state) => ({
-                    layout: {
-                        ...state.layout,
-                        leftWidth: Math.min(420, Math.max(180, width))
-                    }
+                    layout: { ...state.layout, leftWidth: Math.min(420, Math.max(180, width)) }
                 })),
 
             setRightWidth: (width) =>
                 set((state) => ({
-                    layout: {
-                        ...state.layout,
-                        rightWidth: Math.min(480, Math.max(360, width))
-                    }
+                    layout: { ...state.layout, rightWidth: Math.min(480, Math.max(360, width)) }
                 })),
 
             toggleLeftCollapse: () =>
@@ -441,53 +419,50 @@ export const useEditorStore = create<EditorState>()(
 
             reorderElement: (id, newParentId, newIndex) => {
                 get().saveHistory()
-                const state = get()
-                const element = state.elements[id]
-                if (!element) return
 
-                const oldParentId = element.parentId
+                set((state) => {
+                    const element = state.elements[id]
+                    if (!element) return state
 
-                // Get all siblings in the new parent
-                const siblings = Object.values(state.elements)
-                    .filter(el => el.parentId === newParentId && el.id !== id)
-                    .sort((a, b) => (a.index || 0) - (b.index || 0))
+                    const oldParentId = element.parentId
 
-                // Insert into new position
-                siblings.splice(newIndex, 0, element)
+                    // Siblings in the destination parent (excluding the moved element)
+                    const siblings = Object.values(state.elements)
+                        .filter((el) => el.parentId === newParentId && el.id !== id)
+                        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
 
-                // Update all affected indices
-                const updates: Record<string, Partial<EditorElement>> = {}
-                siblings.forEach((el, idx) => {
-                    if (el.index !== idx || el.parentId !== newParentId || el.id === id) { // Include the moved element itself to update parentId
-                        updates[el.id] = { index: idx, parentId: newParentId }
-                    }
-                })
+                    siblings.splice(newIndex, 0, element)
 
-                // If moved from another parent, re-index the old parent's children to fill the gap
-                if (oldParentId && oldParentId !== newParentId) {
-                    const oldSiblings = Object.values(state.elements)
-                        .filter(el => el.parentId === oldParentId && el.id !== id)
-                        .sort((a, b) => (a.index || 0) - (b.index || 0))
-
-                    oldSiblings.forEach((el, idx) => {
-                        if (el.index !== idx) {
-                            updates[el.id] = { ...updates[el.id], index: idx } // Merge if somehow overlapping, though unlikely for different parents
+                    const updates: Record<string, Partial<EditorElement>> = {}
+                    siblings.forEach((el, idx) => {
+                        if (el.index !== idx || el.parentId !== newParentId || el.id === id) {
+                            updates[el.id] = { index: idx, parentId: newParentId }
                         }
                     })
-                }
 
-                set(state => {
-                    const newElements = { ...state.elements }
-                    Object.entries(updates).forEach(([elId, changes]) => {
-                        newElements[elId] = { ...newElements[elId], ...changes }
-                    })
-                    return { elements: newElements }
+                    // Re-index old parent's children if moved cross-parent
+                    if (oldParentId && oldParentId !== newParentId) {
+                        Object.values(state.elements)
+                            .filter((el) => el.parentId === oldParentId && el.id !== id)
+                            .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+                            .forEach((el, idx) => {
+                                if (el.index !== idx) {
+                                    updates[el.id] = { ...updates[el.id], index: idx }
+                                }
+                            })
+                    }
+
+                    const next = { ...state.elements }
+                    for (const [elId, changes] of Object.entries(updates)) {
+                        next[elId] = { ...next[elId], ...changes }
+                    }
+                    return { elements: next }
                 })
             }
         }),
         {
             name: 'editor-storage',
-            version: 5, // Bumped for layout width adjustments (360px)
+            version: 5,
         }
     )
 )

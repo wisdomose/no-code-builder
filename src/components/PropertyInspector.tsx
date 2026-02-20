@@ -12,8 +12,12 @@ import { EffectsPanel } from "./inspector/EffectsPanel";
 import { ImagePanel } from "./inspector/ImagePanel";
 
 export const PropertyInspector: React.FC = () => {
-  const { selectedId, elements, updateElement } = useEditorStore();
-  const element = selectedId ? elements[selectedId] : null;
+  const selectedId = useEditorStore((s) => s.selectedId);
+  const element = useEditorStore((s) =>
+    s.selectedId ? (s.elements[s.selectedId] ?? null) : null,
+  );
+  const updateElement = useEditorStore((s) => s.updateElement);
+  const updateElementMeta = useEditorStore((s) => s.updateElementMeta);
 
   const [expandedSections, setExpandedSections] = React.useState<string[]>([
     "Size & Position",
@@ -37,7 +41,7 @@ export const PropertyInspector: React.FC = () => {
     );
   }
 
-  const handlePropChange = (key: string, value: any) => {
+  const handlePropChange = (key: string, value: unknown) => {
     updateElement(element.id, { [key]: value });
   };
 
@@ -61,15 +65,9 @@ export const PropertyInspector: React.FC = () => {
           <input
             type="text"
             value={element.name || ""}
-            onChange={(e) => {
-              const name = e.target.value;
-              useEditorStore.setState((s) => ({
-                elements: {
-                  ...s.elements,
-                  [element.id]: { ...s.elements[element.id], name },
-                },
-              }));
-            }}
+            onChange={(e) =>
+              updateElementMeta(element.id, { name: e.target.value })
+            }
             placeholder={element.id}
             className="flex-1 min-w-0 bg-transparent text-[13px] font-bold text-text-main outline-none placeholder:text-text-muted/50 focus:border-b focus:border-primary pb-0.5 transition-colors"
           />
@@ -79,7 +77,6 @@ export const PropertyInspector: React.FC = () => {
           <p className="text-[10px] text-text-muted font-medium uppercase tracking-widest">
             {element.type} Layer
           </p>
-          {/* Visibility and Lock badges */}
           <div className="flex items-center gap-1.5">
             {element.visible === false && (
               <span className="flex items-center gap-1 text-[9px] font-bold uppercase text-text-muted px-1.5 py-0.5 rounded bg-background border border-border">

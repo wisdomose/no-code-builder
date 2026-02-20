@@ -39,17 +39,16 @@ function LayerItem({
   onSelect: (id: string) => void;
   elements: Record<string, EditorElement>;
 }) {
-  const updateElement = useEditorStore((s) => s.updateElement);
-  const isSelected = selectedId === el.id;
-  const children = Object.values(elements)
-    .filter((child) => child.parentId === el.id)
-    .sort((a, b) => (a.index || 0) - (b.index || 0));
-  const hasChildren = children.length > 0;
+  const updateElementMeta = useEditorStore((s) => s.updateElementMeta);
 
+  const isSelected = selectedId === el.id;
   const isVisible = el.visible !== false;
   const isLocked = el.locked === true;
-
   const displayName = el.name || el.id;
+
+  const children = Object.values(elements)
+    .filter((child) => child.parentId === el.id)
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
 
   return (
     <div>
@@ -65,7 +64,7 @@ function LayerItem({
         `}
         style={{ paddingLeft: `${depth * 16 + 12}px` }}
       >
-        {hasChildren ? (
+        {children.length > 0 ? (
           <ChevronRight
             size={10}
             className="text-text-muted transform rotate-90 shrink-0"
@@ -91,21 +90,14 @@ function LayerItem({
           {displayName}
         </span>
 
-        {/* Visibility + Lock toggles — visible on hover or when non-default */}
+        {/* Visibility + Lock toggles */}
         <div
           className={`flex items-center gap-1 shrink-0 ${!isVisible || isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}
         >
           <button
             onClick={(e) => {
               e.stopPropagation();
-              updateElement(el.id, {});
-              // Toggle visible on the non-prop metadata
-              useEditorStore.setState((s) => ({
-                elements: {
-                  ...s.elements,
-                  [el.id]: { ...s.elements[el.id], visible: !isVisible },
-                },
-              }));
+              updateElementMeta(el.id, { visible: !isVisible });
             }}
             className="p-0.5 rounded hover:bg-white/10 text-text-muted hover:text-text-main transition-colors"
             title={isVisible ? "Hide" : "Show"}
@@ -119,12 +111,7 @@ function LayerItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              useEditorStore.setState((s) => ({
-                elements: {
-                  ...s.elements,
-                  [el.id]: { ...s.elements[el.id], locked: !isLocked },
-                },
-              }));
+              updateElementMeta(el.id, { locked: !isLocked });
             }}
             className="p-0.5 rounded hover:bg-white/10 text-text-muted hover:text-text-main transition-colors"
             title={isLocked ? "Unlock" : "Lock"}
@@ -153,12 +140,15 @@ function LayerItem({
 }
 
 export const LayerTree: React.FC = () => {
-  const { elements, selectedId, setSelectedId } = useEditorStore();
+  const elements = useEditorStore((s) => s.elements);
+  const selectedId = useEditorStore((s) => s.selectedId);
+  const setSelectedId = useEditorStore((s) => s.setSelectedId);
+
   const rootElements = React.useMemo(
     () =>
       Object.values(elements)
         .filter((el) => !el.parentId)
-        .sort((a, b) => (a.index || 0) - (b.index || 0)),
+        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
     [elements],
   );
 
