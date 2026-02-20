@@ -22,6 +22,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { ToolBar } from "@/components/ToolBar";
 import { ResizeHandle } from "@/components/ResizeHandle";
 import { useEditorStore } from "@/lib/useEditorStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Canvas } from "@/components/Canvas";
 import { Artboard } from "@/components/Artboard";
 import { LayerTree } from "@/components/LayerTree";
@@ -31,6 +32,7 @@ import { StatusBar } from "@/components/StatusBar";
 import { SectionLibrary } from "@/components/SectionLibrary";
 
 function RootDocument() {
+  const isMobile = useIsMobile();
   const {
     layout,
     setLeftWidth,
@@ -42,6 +44,7 @@ function RootDocument() {
     theme,
     leftSidebarTab,
     setLeftSidebarTab,
+    hasHydrated,
   } = useEditorStore();
 
   const mainRef = useRef<HTMLElement>(null);
@@ -71,7 +74,60 @@ function RootDocument() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (isMobile) {
+      if (!layout.isLeftCollapsed) {
+        useEditorStore.setState((s) => ({
+          layout: { ...s.layout, isLeftCollapsed: true },
+        }));
+      }
+      if (!layout.isRightCollapsed) {
+        useEditorStore.setState((s) => ({
+          layout: { ...s.layout, isRightCollapsed: true },
+        }));
+      }
+    }
+  }, [isMobile, hasHydrated]);
+
   const { leftWidth, rightWidth, isLeftCollapsed, isRightCollapsed } = layout;
+
+  const isReady = hasHydrated;
+
+  if (!isReady) {
+    return (
+      <html lang="en" className={theme}>
+        <head>
+          <HeadContent />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+            rel="stylesheet"
+          />
+        </head>
+        <body className="antialiased h-screen w-screen flex flex-col items-center justify-center bg-background text-text-main">
+          <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20">
+              <Layers size={32} />
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold tracking-tight text-text-main">
+                Codex
+              </span>
+              <span className="text-xs text-text-muted font-medium mt-1 tracking-widest uppercase">
+                Loading Workspace
+              </span>
+            </div>
+          </div>
+          <Scripts />
+        </body>
+      </html>
+    );
+  }
 
   return (
     <html lang="en" className={theme}>
@@ -92,15 +148,17 @@ function RootDocument() {
         <div className="flex flex-col h-screen overflow-hidden bg-background text-text-main">
           <Header />
 
-          <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-col-reverse md:flex-row flex-1 overflow-hidden relative">
             {/* Zone 1: Far Left ToolBar */}
             <ToolBar />
 
             {/* Main Editor Grid Layout */}
             <div
-              className="flex-1 grid overflow-hidden relative"
+              className={`flex-1 overflow-hidden relative ${isMobile ? "flex" : "grid"}`}
               style={{
-                gridTemplateColumns: `
+                gridTemplateColumns: isMobile
+                  ? undefined
+                  : `
                   ${isLeftCollapsed ? "48px" : `${leftWidth}px`}
                   1fr
                   ${isRightCollapsed ? "48px" : `${rightWidth}px`}
@@ -108,7 +166,9 @@ function RootDocument() {
               }}
             >
               {/* Left Sidebar - Navigator */}
-              <div className="relative group h-full z-10">
+              <div
+                className={`relative group h-full z-40 ${isMobile && isLeftCollapsed ? "hidden" : ""} ${isMobile ? "absolute left-0 w-full top-0 bottom-0 shadow-2xl" : ""}`}
+              >
                 <Sidebar
                   position="left"
                   title={
@@ -173,7 +233,7 @@ function RootDocument() {
               {/* Spatial Workspace */}
               <main
                 ref={mainRef}
-                className="h-full relative overflow-hidden flex flex-col bg-background canvas-grid"
+                className="flex-1 h-full relative overflow-hidden flex flex-col bg-background canvas-grid"
               >
                 <Canvas>
                   <Artboard />
@@ -196,7 +256,9 @@ function RootDocument() {
               </main>
 
               {/* Right Sidebar - Design */}
-              <div className="relative group h-full z-10">
+              <div
+                className={`relative group h-full z-40 ${isMobile && isRightCollapsed ? "hidden" : ""} ${isMobile ? "absolute right-0 w-full top-0 bottom-0 shadow-2xl" : ""}`}
+              >
                 {!isRightCollapsed && (
                   <div className="absolute top-0 -left-0.5 bottom-0 z-[20]">
                     <ResizeHandle

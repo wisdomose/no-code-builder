@@ -1,5 +1,6 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   title,
   icon,
 }) => {
+  const isMobile = useIsMobile();
+
   return (
     <div
       className={`
@@ -27,7 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ${position === "left" ? "border-r" : "border-l"}
         transition-all duration-200 ease-in-out
       `}
-      style={{ width: isCollapsed ? "48px" : `${width}px` }}
+      style={{
+        width: isMobile ? "100%" : isCollapsed ? "48px" : `${width}px`,
+      }}
     >
       <div className="h-10 border-b border-border flex items-center px-2 shrink-0 bg-background/30">
         {!isCollapsed ? (

@@ -66,14 +66,16 @@ export const ToolBar: React.FC = () => {
   };
 
   return (
-    <aside className="w-14 flex flex-col items-center py-4 gap-6 border-r border-border bg-surface shrink-0 z-20">
+    <aside className="w-full md:w-14 h-14 md:h-auto flex flex-row md:flex-col items-center md:py-4 px-2 md:px-0 gap-2 md:gap-6 border-t md:border-t-0 md:border-r border-border bg-surface shrink-0 z-20 overflow-x-auto no-scrollbar">
       {/* Search / Add Button */}
-      <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-        <Plus size={18} />
-      </button>
+      <div className="shrink-0">
+        <button className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+          <Plus size={18} />
+        </button>
+      </div>
 
       {/* Main Tools */}
-      <div className="flex flex-col gap-2 w-full items-center">
+      <div className="flex flex-row md:flex-col gap-2 items-center flex-1 md:flex-none overflow-x-auto no-scrollbar mask-edges-horizontal md:mask-none px-2 md:px-0">
         <ToolButton
           icon={<MousePointer2 size={18} />}
           active={
@@ -108,7 +110,7 @@ export const ToolBar: React.FC = () => {
       </div>
 
       {/* Bottom Tools */}
-      <div className="mt-auto flex flex-col gap-4">
+      <div className="ml-auto md:ml-0 md:mt-auto flex flex-row md:flex-col gap-4 shrink-0 px-2 md:px-0">
         <button className="text-text-muted hover:text-text-main transition-colors">
           <Settings size={18} />
         </button>
@@ -130,7 +132,7 @@ const ToolButton: React.FC<{
     title={title}
     onClick={onClick}
     className={`
-      w-10 h-10 flex items-center justify-center rounded-md transition-all
+      w-10 h-10 shrink-0 flex items-center justify-center rounded-md transition-all
       ${
         active
           ? "bg-primary/10 text-primary shadow-sm"

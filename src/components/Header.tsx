@@ -8,8 +8,11 @@ import {
   Moon,
   Share2,
   Eye,
+  Menu,
+  Settings2,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/useEditorStore";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export const Header: React.FC = () => {
   const theme = useEditorStore((s) => s.theme);
@@ -17,10 +20,21 @@ export const Header: React.FC = () => {
   const scale = useEditorStore((s) => s.camera.scale);
   const undo = useEditorStore((s) => s.undo);
   const redo = useEditorStore((s) => s.redo);
+  const toggleLeftCollapse = useEditorStore((s) => s.toggleLeftCollapse);
+  const toggleRightCollapse = useEditorStore((s) => s.toggleRightCollapse);
+  const isMobile = useIsMobile();
 
   return (
     <header className="h-14 border-b border-border flex items-center px-4 shrink-0 justify-between bg-surface z-[100] select-none">
       <div className="flex items-center gap-4">
+        {isMobile && (
+          <button
+            onClick={toggleLeftCollapse}
+            className="p-2 -ml-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+          >
+            <Menu size={18} />
+          </button>
+        )}
         <div className="flex items-center gap-2.5 font-bold text-[14px] tracking-tight">
           <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white shadow-sm shadow-primary/20">
             <Layers size={18} />
@@ -32,8 +46,8 @@ export const Header: React.FC = () => {
             </span>
           </div>
         </div>
-        <div className="h-4 w-[1px] bg-border mx-1" />
-        <div className="flex items-center gap-2 text-[12px] font-medium text-text-muted">
+        <div className="hidden md:block h-4 w-[1px] bg-border mx-1" />
+        <div className="hidden md:flex items-center gap-2 text-[12px] font-medium text-text-muted">
           <span className="hover:text-text-main cursor-pointer transition-colors">
             Workspace
           </span>
@@ -44,7 +58,7 @@ export const Header: React.FC = () => {
       </div>
 
       {/* Device Mode Selectors */}
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-4 bg-background/50 border border-border rounded-lg px-3 py-1.5 shadow-sm">
+      <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-4 bg-background/50 border border-border rounded-lg px-3 py-1.5 shadow-sm">
         <div className="flex items-center gap-2 text-[11px] font-mono font-medium opacity-70">
           <div className="p-1 rounded hover:bg-surface transition-colors cursor-pointer text-primary">
             Desktop
@@ -97,15 +111,23 @@ export const Header: React.FC = () => {
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors">
+        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors hidden md:block">
           <Share2 size={18} />
         </button>
-        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors">
+        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors hidden md:block">
           <Eye size={18} />
         </button>
-        <button className="bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md shadow-primary/20">
+        <button className="hidden md:block bg-primary hover:bg-primary/90 text-white px-4 py-2 text-xs md:text-sm md:px-5 rounded-lg font-bold transition-all shadow-md shadow-primary/20">
           Publish
         </button>
+        {isMobile && (
+          <button
+            onClick={toggleRightCollapse}
+            className="p-2 -mr-2 hover:bg-surface rounded-md text-text-muted transition-colors"
+          >
+            <Settings2 size={18} />
+          </button>
+        )}
       </div>
     </header>
   );

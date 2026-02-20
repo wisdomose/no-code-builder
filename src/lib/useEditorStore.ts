@@ -146,6 +146,7 @@ interface EditorState {
 
     hoveredElementId: string | null
     insertIndex: number | null
+    hasHydrated: boolean
 
     // Snap guides (cleared on mouse-up)
     snapLines: SnapLine[]
@@ -187,6 +188,7 @@ interface EditorState {
     setLeftSidebarTab: (tab: 'layers' | 'assets' | 'sections') => void
     reorderElement: (id: string, newParentId: string, newIndex: number) => void
     setInsertIndex: (index: number | null) => void
+    setHasHydrated: (state: boolean) => void
 }
 
 const MAX_HISTORY = 100
@@ -207,12 +209,15 @@ export const useEditorStore = create<EditorState>()(
             leftSidebarTab: 'layers',
             hoveredElementId: null,
             insertIndex: null,
+            hasHydrated: false,
             snapLines: [],
             setSnapLines: (lines) => set({ snapLines: lines }),
             editingId: null,
             setEditingId: (id) => set({ editingId: id }),
 
             interactionState: { mode: 'idle' },
+
+            setHasHydrated: (state) => set({ hasHydrated: state }),
 
             setInteractionMode: (mode, activeId, handle) =>
                 set({ interactionState: { mode, activeId, handle } }),
@@ -471,6 +476,11 @@ export const useEditorStore = create<EditorState>()(
         {
             name: 'editor-storage',
             version: 5,
+            onRehydrateStorage: () => (state) => {
+                if (state) {
+                    state.setHasHydrated(true)
+                }
+            }
         }
     )
 )

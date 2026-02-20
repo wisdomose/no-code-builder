@@ -23,6 +23,18 @@ import {
   createFooter,
 } from "@/lib/sectionTemplates";
 
+import { NavPreview } from "./previews/NavPreview";
+import { HeroPreview } from "./previews/HeroPreview";
+import { FeaturesPreview } from "./previews/FeaturesPreview";
+import { BentoPreview } from "./previews/BentoPreview";
+import { TestimonialsPreview } from "./previews/TestimonialsPreview";
+import { PricingPreview } from "./previews/PricingPreview";
+import { CtaPreview } from "./previews/CtaPreview";
+import { StatsPreview } from "./previews/StatsPreview";
+import { TeamPreview } from "./previews/TeamPreview";
+import { FaqPreview } from "./previews/FaqPreview";
+import { FooterPreview } from "./previews/FooterPreview";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SectionDef {
@@ -36,214 +48,6 @@ interface CategoryDef {
   title: string;
   icon: React.ReactNode;
   sections: SectionDef[];
-}
-
-// ─── Mini Previews ────────────────────────────────────────────────────────────
-
-function NavPreview() {
-  return (
-    <div className="w-full h-8 bg-background/60 border border-border/30 rounded-lg flex items-center justify-between px-3 gap-2">
-      <div className="w-8 h-2 bg-primary/60 rounded-full" />
-      <div className="flex gap-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="w-5 h-1.5 bg-text-muted/30 rounded-full" />
-        ))}
-      </div>
-      <div className="w-10 h-4 bg-primary/20 border border-primary/40 rounded" />
-    </div>
-  );
-}
-
-function HeroPreview() {
-  return (
-    <div className="w-full aspect-video bg-background/50 rounded p-3 flex flex-col items-center justify-center gap-2 border border-border/30">
-      <div className="w-24 h-1.5 bg-primary/40 rounded-full" />
-      <div className="w-full h-2.5 bg-text-muted/20 rounded-full" />
-      <div className="w-3/4 h-2 bg-text-muted/15 rounded-full" />
-      <div className="w-2/3 h-1.5 bg-text-muted/10 rounded-full" />
-      <div className="flex gap-2 mt-1">
-        <div className="w-14 h-4 bg-primary/30 border border-primary/30 rounded" />
-        <div className="w-12 h-4 bg-text-muted/15 border border-border/30 rounded" />
-      </div>
-    </div>
-  );
-}
-
-function FeaturesPreview() {
-  return (
-    <div className="w-full aspect-[16/8] grid grid-cols-3 grid-rows-2 gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-surface rounded border border-border/40 p-1.5 flex flex-col gap-1"
-        >
-          <div className="w-3 h-3 rounded-full bg-primary/30" />
-          <div className="w-full h-1 bg-text-muted/25 rounded-full" />
-          <div className="w-3/4 h-1 bg-text-muted/15 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BentoPreview() {
-  return (
-    <div className="w-full aspect-[16/10] grid grid-cols-5 grid-rows-4 gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg">
-      <div className="col-span-3 row-span-2 bg-primary/20 rounded border border-primary/20" />
-      <div className="col-span-2 row-span-2 bg-surface rounded border border-border/40" />
-      <div className="col-span-2 row-span-2 bg-surface rounded border border-border/40" />
-      <div className="col-span-3 row-span-2 bg-amber-500/20 rounded border border-amber-400/20" />
-    </div>
-  );
-}
-
-function TestimonialsPreview() {
-  return (
-    <div className="w-full aspect-[16/7] flex gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="flex-1 bg-surface rounded-md border border-border/40 p-1.5 flex flex-col gap-1"
-        >
-          <div className="w-full h-1 bg-text-muted/20 rounded-full" />
-          <div className="w-full h-1 bg-text-muted/15 rounded-full" />
-          <div className="w-2/3 h-1 bg-text-muted/10 rounded-full" />
-          <div className="mt-auto flex items-center gap-1">
-            <div className="w-4 h-4 rounded-full bg-primary/30 shrink-0" />
-            <div className="flex flex-col gap-0.5 flex-1">
-              <div className="w-full h-1 bg-text-muted/25 rounded-full" />
-              <div className="w-2/3 h-1 bg-text-muted/15 rounded-full" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function PricingPreview() {
-  return (
-    <div className="w-full aspect-[16/9] flex gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg items-start">
-      {[false, true, false].map((active, i) => (
-        <div
-          key={i}
-          className={`flex-1 rounded-md border p-1.5 flex flex-col gap-1 ${
-            active
-              ? "bg-primary/20 border-primary/40"
-              : "bg-surface border-border/40"
-          }`}
-        >
-          <div className="w-2/3 h-1 bg-text-muted/30 rounded-full" />
-          <div className="w-full h-2 bg-text-muted/20 rounded-full" />
-          <div className="mt-1 space-y-0.5">
-            {[1, 2, 3].map((j) => (
-              <div
-                key={j}
-                className="w-full h-1 bg-text-muted/15 rounded-full"
-              />
-            ))}
-          </div>
-          <div
-            className={`mt-auto h-3 rounded ${active ? "bg-primary/40" : "bg-text-muted/15"}`}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CtaPreview() {
-  return (
-    <div className="w-full aspect-[16/6] bg-primary/20 border border-primary/30 rounded-lg p-3 flex flex-col items-center justify-center gap-1.5">
-      <div className="w-2/3 h-2 bg-text-muted/30 rounded-full" />
-      <div className="w-1/2 h-1.5 bg-text-muted/20 rounded-full" />
-      <div className="flex gap-1.5 mt-1">
-        <div className="w-12 h-3 bg-primary/40 rounded" />
-        <div className="w-10 h-3 bg-text-muted/15 rounded" />
-      </div>
-    </div>
-  );
-}
-
-function StatsPreview() {
-  return (
-    <div className="w-full h-10 bg-background/50 border border-border/30 rounded-lg flex items-center justify-around px-3">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex flex-col items-center gap-0.5">
-          <div className="w-8 h-2 bg-primary/40 rounded-full" />
-          <div className="w-6 h-1.5 bg-text-muted/20 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TeamPreview() {
-  const colors = [
-    "bg-primary/40",
-    "bg-rose-500/40",
-    "bg-emerald-500/40",
-    "bg-amber-500/40",
-  ];
-  return (
-    <div className="w-full aspect-[16/7] flex gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg">
-      {colors.map((c, i) => (
-        <div
-          key={i}
-          className="flex-1 bg-surface rounded-md border border-border/40 p-2 flex flex-col items-center gap-1.5"
-        >
-          <div className={`w-6 h-6 rounded-full ${c}`} />
-          <div className="w-full h-1 bg-text-muted/25 rounded-full" />
-          <div className="w-3/4 h-1 bg-text-muted/15 rounded-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FaqPreview() {
-  return (
-    <div className="w-full aspect-[16/9] flex flex-col gap-1.5 p-2 bg-background/50 border border-border/30 rounded-lg">
-      {[1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="bg-surface rounded border border-border/40 px-2 py-1.5 flex items-center justify-between gap-2"
-        >
-          <div className="flex-1 h-1.5 bg-text-muted/25 rounded-full" />
-          <div className="w-1.5 h-1.5 border border-text-muted/30 rounded-[2px] shrink-0" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function FooterPreview() {
-  return (
-    <div className="w-full aspect-[16/7] bg-[#0a0a0a]/80 border border-white/10 rounded-lg p-2 flex flex-col gap-1.5">
-      <div className="flex gap-3 flex-1">
-        <div className="flex flex-col gap-1 w-1/3">
-          <div className="w-10 h-2 bg-white/40 rounded-full" />
-          <div className="w-full h-1 bg-white/15 rounded-full" />
-          <div className="w-3/4 h-1 bg-white/10 rounded-full" />
-        </div>
-        <div className="flex gap-4 flex-1">
-          {[1, 2, 3].map((c) => (
-            <div key={c} className="flex flex-col gap-1">
-              <div className="w-8 h-1.5 bg-white/25 rounded-full" />
-              {[1, 2, 3].map((l) => (
-                <div key={l} className="w-6 h-1 bg-white/10 rounded-full" />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="h-px bg-white/10" />
-      <div className="flex justify-between">
-        <div className="w-20 h-1 bg-white/15 rounded-full" />
-        <div className="w-16 h-1 bg-white/10 rounded-full" />
-      </div>
-    </div>
-  );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
