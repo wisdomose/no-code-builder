@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { useEditorStore } from "@/lib/useEditorStore";
 import type { EditorElement as IEditorElement } from "@/lib/useEditorStore";
 import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
@@ -109,33 +110,28 @@ function useElementDrag(
 
     let startPropX = element.props.x;
     let startPropY = element.props.y;
-    let flowStartX = startPropX;
-    let flowStartY = startPropY;
 
-    if (isParentFlow) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const currentCamera = store.camera;
-
-      let newX = (rect.left - currentCamera.x) / currentCamera.scale;
-      let newY = (rect.top - currentCamera.y) / currentCamera.scale;
-
-      if (element.parentId) {
-        const parentNode = document.querySelector(
-          `[data-element-id="${element.parentId}"]`,
-        );
-        if (parentNode) {
-          const parentRect = parentNode.getBoundingClientRect();
-          const borderLeft = parent?.props.background ? 0 : 1;
-          const borderTop = parent?.props.background ? 0 : 1;
-          newX =
-            (rect.left - parentRect.left) / currentCamera.scale - borderLeft;
-          newY = (rect.top - parentRect.top) / currentCamera.scale - borderTop;
-        }
-      }
-
-      flowStartX = newX;
-      flowStartY = newY;
+    // ── Absolute position conversion for portaled drag ───────────────────────
+    // Now that dragging elements are portaled to the artboard root, they render
+    // relative to the artboard. If `element` is nested, its `props.x/y` are
+    // parent-relative, so using them directly would make it "jump" to the top
+    // left of the artboard. We must read its true absolute screen position:
+    const elementNode = document.querySelector(
+      `[data-element-id="${element.id}"]`,
+    );
+    const artboardNode = document.querySelector('[data-artboard="true"]');
+    if (elementNode && artboardNode) {
+      const elRect = elementNode.getBoundingClientRect();
+      const artRect = artboardNode.getBoundingClientRect();
+      const cam = store.camera;
+      startPropX = Math.round((elRect.left - artRect.left) / cam.scale);
+      startPropY = Math.round((elRect.top - artRect.top) / cam.scale);
     }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // NOTE: flowStartX/Y removed — startPropX/Y are now always artboard-absolute
+    // (read from DOM rect above). The flow path no longer needs parent-relative coords
+    // because the portaled element positions itself relative to the artboard root.
 
     const affectedElements = [
       element,
@@ -143,6 +139,9 @@ function useElementDrag(
     ];
     const affectedIds = new Set(affectedElements.map((el) => el.id));
 
+    // startPropX/Y are artboard-absolute for the dragged element.
+    // Descendants use their own props.x/y (relative to their own parents);
+    // they don't portal so they move within the element subtree correctly.
     const startPositions = affectedElements.map((el) => ({
       id: el.id,
       x: el.id === element.id ? startPropX : el.props.x,
@@ -166,25 +165,12 @@ function useElementDrag(
           store.setInteractionMode("dragging", element.id);
 
           if (isParentFlow) {
-            startPropX = flowStartX;
-            startPropY = flowStartY;
+            // startPropX/Y are already artboard-absolute. Push them to the store
+            // so the element escapes flow layout and the portal positions it correctly.
             store.updateElement(element.id, {
-              x: flowStartX,
-              y: flowStartY,
+              x: startPropX,
+              y: startPropY,
             });
-            // Sync startPositions so subsequent updateElements calls use the
-            // correct visual baseline (flowStart) rather than the raw props.x/y
-            // which for flex children is often an arbitrary placeholder (e.g. 0).
-            const flowIdx = startPositions.findIndex(
-              (p) => p.id === element.id,
-            );
-            if (flowIdx !== -1) {
-              startPositions[flowIdx] = {
-                id: element.id,
-                x: flowStartX,
-                y: flowStartY,
-              };
-            }
           }
         } else {
           return;
@@ -310,6 +296,31 @@ function useElementDrag(
       const finalState = useEditorStore.getState();
       const finalHoveredId = finalState.hoveredElementId;
       const latestElements = finalState.elements;
+      const el = latestElements[element.id];
+
+      // ── Portal coordinate fix ────────────────────────────────────────────────
+      // During portal drag, props.x/y are artboard-absolute (required so the
+      // portaled element's CSS left/top positions it correctly on the artboard).
+      // But reparentElement calls getAbsolutePosition which walks up the ancestor
+      // chain and ADDS parent offsets — it expects props.x/y to be relative only
+      // to the immediate parent, not artboard-absolute.
+      // Fix: convert artboard-absolute → parent-relative before reparentElement.
+      if (el?.parentId) {
+        // Sum up all ancestor offsets to get the current parent's artboard position
+        let parentAbsX = 0;
+        let parentAbsY = 0;
+        let curr: typeof el | undefined = latestElements[el.parentId];
+        while (curr) {
+          parentAbsX += curr.props.x;
+          parentAbsY += curr.props.y;
+          curr = curr.parentId ? latestElements[curr.parentId] : undefined;
+        }
+        store.updateElement(element.id, {
+          x: el.props.x - parentAbsX,
+          y: el.props.y - parentAbsY,
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────────
 
       if (finalHoveredId) {
         const parentEl = latestElements[finalHoveredId];
@@ -644,7 +655,7 @@ export const Element: React.FC<ElementProps> = React.memo(
       }
     };
 
-    return (
+    const content = (
       <div
         onMouseDown={handleMouseDown}
         data-element-id={element.id}
@@ -713,6 +724,15 @@ export const Element: React.FC<ElementProps> = React.memo(
         )}
       </div>
     );
+
+    if (isDragging) {
+      const artboardNode = document.querySelector('[data-artboard="true"]');
+      if (artboardNode) {
+        return createPortal(content, artboardNode);
+      }
+    }
+
+    return content;
   },
 );
 
