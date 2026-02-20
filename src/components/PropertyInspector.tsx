@@ -12,7 +12,6 @@ import { EffectsPanel } from "./inspector/EffectsPanel";
 import { ImagePanel } from "./inspector/ImagePanel";
 
 export const PropertyInspector: React.FC = () => {
-  const selectedId = useEditorStore((s) => s.selectedId);
   const element = useEditorStore((s) =>
     s.selectedId ? (s.elements[s.selectedId] ?? null) : null,
   );

@@ -4,6 +4,7 @@
 import { Move } from "lucide-react";
 import { Section, Control } from "./controls";
 import type { EditorElement } from "@/lib/useEditorStore";
+import { getElementRef } from "@/lib/useEditorStore";
 
 export function SizePositionPanel({
   element,
@@ -40,9 +41,7 @@ export function SizePositionPanel({
           onChange={(v) => onPropChange("width", v)}
           onToggleAuto={() => {
             if (element.props.width === "auto") {
-              const node = document.querySelector(
-                `[data-element-id="${element.id}"]`,
-              ) as HTMLElement | null;
+              const node = getElementRef(element.id);
               onPropChange("width", node ? node.offsetWidth : 100);
             } else {
               onPropChange("width", "auto");
@@ -56,9 +55,7 @@ export function SizePositionPanel({
           onChange={(v) => onPropChange("height", v)}
           onToggleAuto={() => {
             if (element.props.height === "auto") {
-              const node = document.querySelector(
-                `[data-element-id="${element.id}"]`,
-              ) as HTMLElement | null;
+              const node = getElementRef(element.id);
               onPropChange("height", node ? node.offsetHeight : 100);
             } else {
               onPropChange("height", "auto");

@@ -94,25 +94,24 @@ function measureFromDOM(
 // ─── Resize logic (with snap) ─────────────────────────────────────────────────
 
 function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
-  const handleResizeMouseDown = (e: React.MouseEvent, dir: string) => {
+  const startResize = (clientX: number, clientY: number, dir: string) => {
     if (!element || !rect) return;
-    e.stopPropagation();
 
     const store = useEditorStore.getState();
     store.saveHistory();
 
-    const startX = e.clientX;
-    const startY = e.clientY;
+    const startX = clientX;
+    const startY = clientY;
     const startW = rect.w;
     const startH = rect.h;
     const startEX = element.props.x;
     const startEY = element.props.y;
 
-    const handleResize = (moveEvent: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       const state = useEditorStore.getState();
       const currentCamera = state.camera;
-      let dx = (moveEvent.clientX - startX) / currentCamera.scale;
-      let dy = (moveEvent.clientY - startY) / currentCamera.scale;
+      let dx = (clientX - startX) / currentCamera.scale;
+      let dy = (clientY - startY) / currentCamera.scale;
 
       // ── Snap during resize ─────────────────────────────────────────────────
       const { artboard, elements: allEls } = state;
@@ -166,17 +165,39 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
       useEditorStore.getState().updateElement(element.id, updates);
     };
 
+    const handleResize = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+    const handleTouchResize = (e: TouchEvent) => {
+      e.preventDefault();
+      handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+
     const stopResize = () => {
       window.removeEventListener("mousemove", handleResize);
       window.removeEventListener("mouseup", stopResize);
+      window.removeEventListener("touchmove", handleTouchResize);
+      window.removeEventListener("touchend", stopResize);
+      window.removeEventListener("touchcancel", stopResize);
       useEditorStore.getState().setSnapLines([]);
     };
 
     window.addEventListener("mousemove", handleResize);
     window.addEventListener("mouseup", stopResize);
+    window.addEventListener("touchmove", handleTouchResize, { passive: true });
+    window.addEventListener("touchend", stopResize);
+    window.addEventListener("touchcancel", stopResize);
   };
 
-  return { handleResizeMouseDown };
+  const handleResizeMouseDown = (e: React.MouseEvent, dir: string) => {
+    e.stopPropagation();
+    startResize(e.clientX, e.clientY, dir);
+  };
+
+  const handleResizeTouchStart = (e: React.TouchEvent, dir: string) => {
+    e.stopPropagation();
+    startResize(e.touches[0].clientX, e.touches[0].clientY, dir);
+  };
+
+  return { handleResizeMouseDown, handleResizeTouchStart };
 }
 
 // ─── Handle config ────────────────────────────────────────────────────────────
@@ -203,7 +224,10 @@ interface ChromeProps {
 }
 
 const SelectionChrome: React.FC<ChromeProps> = ({ rect, scale, element }) => {
-  const { handleResizeMouseDown } = useResizeHandles(element, rect);
+  const { handleResizeMouseDown, handleResizeTouchStart } = useResizeHandles(
+    element,
+    rect,
+  );
 
   return (
     <>
@@ -238,6 +262,7 @@ const SelectionChrome: React.FC<ChromeProps> = ({ rect, scale, element }) => {
           <div
             key={dir}
             onMouseDown={(e) => handleResizeMouseDown(e, dir)}
+            onTouchStart={(e) => handleResizeTouchStart(e, dir)}
             style={{
               position: "absolute",
               left,

@@ -4,6 +4,14 @@ import { persist } from 'zustand/middleware'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Non-reactive element refs for direct DOM dimension access
+const elementRefs = new Map<string, HTMLElement>();
+export const getElementRef = (id: string) => elementRefs.get(id);
+export const setElementRef = (id: string, el: HTMLElement | null) => {
+    if (el) elementRefs.set(id, el);
+    else elementRefs.delete(id);
+};
+
 /** Returns the artboard-absolute position of an element by summing ancestor offsets. */
 export function getAbsolutePosition(
     element: EditorElement,

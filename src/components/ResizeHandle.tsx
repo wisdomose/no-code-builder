@@ -12,35 +12,56 @@ export const ResizeHandle: React.FC<ResizeHandleProps> = ({
   const isResizing = useRef(false);
   const lastX = useRef(0);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const startResize = (clientX: number) => {
     isResizing.current = true;
-    lastX.current = e.clientX;
+    lastX.current = clientX;
     document.body.style.cursor = "col-resize";
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const handleMove = (clientX: number) => {
       if (!isResizing.current) return;
-      const delta = moveEvent.clientX - lastX.current;
-      lastX.current = moveEvent.clientX;
+      const delta = clientX - lastX.current;
+      lastX.current = clientX;
       // For left sidebar: moving right (positive delta) increases width.
       // For right sidebar: moving right (positive delta) decreases width.
       // So if position is right, delta is positive. If left, it's negative.
       onResize(position === "right" ? delta : -delta);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX);
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleMove(e.touches[0].clientX);
+    };
+
+    const handleEnd = () => {
       isResizing.current = false;
       document.body.style.cursor = "default";
       window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleEnd);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleEnd);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startResize(e.clientX);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Cannot usually preventDefault passive touch events without a ref, but start is not passive here.
+    startResize(e.touches[0].clientX);
   };
 
   return (
     <div
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       className={`
         w-1.5 h-full cursor-col-resize hover:bg-[#007aff]/30 transition-colors
         absolute top-0 bottom-0 z-50

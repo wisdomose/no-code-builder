@@ -20,34 +20,58 @@ export const Artboard: React.FC = () => {
   );
 
   // ── Vertical resize handle ─────────────────────────────────────────────────
-  const handleHeightDragStart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const startY = e.clientY;
+  const startHeightDrag = (clientY: number) => {
+    const startY = clientY;
     const startHeight = artboard.height;
     const camera = useEditorStore.getState().camera;
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const dy = (moveEvent.clientY - startY) / camera.scale;
+    const handleMove = (clientY: number) => {
+      const dy = (clientY - startY) / camera.scale;
       const newHeight = Math.max(200, Math.round(startHeight + dy));
       setArtboard({ height: newHeight });
+    };
+
+    const onMouseMove = (e: MouseEvent) => handleMove(e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleMove(e.touches[0].clientY);
     };
 
     const onMouseUp = () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onMouseUp);
       document.body.style.cursor = "";
     };
 
     document.body.style.cursor = "ns-resize";
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onMouseUp);
+  };
+
+  const handleHeightDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startHeightDrag(e.clientY);
+  };
+
+  const handleHeightTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    startHeightDrag(e.touches[0].clientY);
   };
 
   // ── Click on artboard background deselects ─────────────────────────────────
   const handleArtboardMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only deselect when clicking directly on the artboard, not on a child element
+    if (e.target === e.currentTarget) {
+      setSelectedId(null);
+    }
+  };
+
+  const handleArtboardTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       setSelectedId(null);
     }
@@ -60,6 +84,7 @@ export const Artboard: React.FC = () => {
         data-artboard="true"
         ref={artboardRef}
         onMouseDown={handleArtboardMouseDown}
+        onTouchStart={handleArtboardTouchStart}
         style={{
           width: `${artboard.width}px`,
           height: `${artboard.height}px`,
@@ -82,6 +107,7 @@ export const Artboard: React.FC = () => {
       {/* ── Height resize handle ── */}
       <div
         onMouseDown={handleHeightDragStart}
+        onTouchStart={handleHeightTouchStart}
         style={{ width: `${artboard.width}px` }}
         className="relative h-3 flex items-center justify-center cursor-ns-resize group mt-0"
         title="Drag to resize artboard height"
