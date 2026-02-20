@@ -1,6 +1,7 @@
 import React from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
 import type { EditorElement as IEditorElement } from "@/lib/useEditorStore";
+import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
 
 interface ElementProps {
   element: IEditorElement;
@@ -154,8 +155,8 @@ function useElementDrag(
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const currentCamera = useEditorStore.getState().camera;
-      const dx = (moveEvent.clientX - startX) / currentCamera.scale;
-      const dy = (moveEvent.clientY - startY) / currentCamera.scale;
+      let dx = (moveEvent.clientX - startX) / currentCamera.scale;
+      let dy = (moveEvent.clientY - startY) / currentCamera.scale;
 
       if (!isDragStarted) {
         if (
@@ -171,11 +172,55 @@ function useElementDrag(
               x: flowStartX,
               y: flowStartY,
             });
+            // Sync startPositions so subsequent updateElements calls use the
+            // correct visual baseline (flowStart) rather than the raw props.x/y
+            // which for flex children is often an arbitrary placeholder (e.g. 0).
+            const flowIdx = startPositions.findIndex(
+              (p) => p.id === element.id,
+            );
+            if (flowIdx !== -1) {
+              startPositions[flowIdx] = {
+                id: element.id,
+                x: flowStartX,
+                y: flowStartY,
+              };
+            }
           }
         } else {
           return;
         }
       }
+
+      // ── Snap (free/absolute elements only) ──────────────────────────────────
+      if (!isParentFlow) {
+        const state = useEditorStore.getState();
+        const { artboard, elements: allEls } = state;
+        const artboardH = computeArtboardHeight(allEls, artboard.height);
+
+        const rawX = startPropX + dx;
+        const rawY = startPropY + dy;
+        const elW =
+          typeof element.props.width === "number" ? element.props.width : 0;
+        const elH =
+          typeof element.props.height === "number" ? element.props.height : 0;
+
+        // Peers: root-level elements excluding the element being dragged and its descendants
+        const peers = Object.values(allEls).filter(
+          (el) => !el.parentId && !affectedIds.has(el.id),
+        );
+
+        const snap = getSnapResult(
+          { x: rawX, y: rawY, w: elW, h: elH },
+          artboard.width,
+          artboardH,
+          peers,
+        );
+
+        dx += snap.dx;
+        dy += snap.dy;
+        state.setSnapLines(snap.lines);
+      }
+      // ────────────────────────────────────────────────────────────────────────
 
       const updates = startPositions.map((pos) => ({
         id: pos.id,
@@ -257,6 +302,9 @@ function useElementDrag(
         rafId = null;
       }
 
+      // Clear snap guides
+      useEditorStore.getState().setSnapLines([]);
+
       if (!isDragStarted) return;
 
       const finalState = useEditorStore.getState();
@@ -305,9 +353,47 @@ function useElementResize(element: IEditorElement) {
     const startEY = element.props.y;
 
     const handleResize = (moveEvent: MouseEvent) => {
-      const currentCamera = useEditorStore.getState().camera;
-      const dx = (moveEvent.clientX - startX) / currentCamera.scale;
-      const dy = (moveEvent.clientY - startY) / currentCamera.scale;
+      const state = useEditorStore.getState();
+      const currentCamera = state.camera;
+      let dx = (moveEvent.clientX - startX) / currentCamera.scale;
+      let dy = (moveEvent.clientY - startY) / currentCamera.scale;
+
+      // ── Snap during resize ────────────────────────────────────────────────
+      const { artboard, elements: allEls } = state;
+      const artboardH = computeArtboardHeight(allEls, artboard.height);
+
+      // Build the proposed rect after applying raw delta to the moving edges
+      let propX = startEX;
+      let propY = startEY;
+      let propW = startW;
+      let propH = startH;
+      if (dir.includes("e")) propW = Math.max(10, startW + dx);
+      if (dir.includes("s")) propH = Math.max(10, startH + dy);
+      if (dir.includes("w")) {
+        propW = Math.max(10, startW - dx);
+        propX = startEX + (startW - propW);
+      }
+      if (dir.includes("n")) {
+        propH = Math.max(10, startH - dy);
+        propY = startEY + (startH - propH);
+      }
+
+      const peers = Object.values(allEls).filter(
+        (el) => !el.parentId && el.id !== element.id,
+      );
+
+      const snap = getSnapResult(
+        { x: propX, y: propY, w: propW, h: propH },
+        artboard.width,
+        artboardH,
+        peers,
+      );
+
+      // Apply snap corrections to the moving edge(s) only
+      if (dir.includes("e") || dir.includes("w")) dx += snap.dx;
+      if (dir.includes("s") || dir.includes("n")) dy += snap.dy;
+      state.setSnapLines(snap.lines);
+      // ─────────────────────────────────────────────────────────────────────
 
       const updates: Partial<IEditorElement["props"]> = {};
 
@@ -332,6 +418,8 @@ function useElementResize(element: IEditorElement) {
     const stopResize = () => {
       window.removeEventListener("mousemove", handleResize);
       window.removeEventListener("mouseup", stopResize);
+      // Clear snap guides
+      useEditorStore.getState().setSnapLines([]);
     };
 
     window.addEventListener("mousemove", handleResize);

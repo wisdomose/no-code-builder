@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { SnapLine } from './useSnap'
 import { persist } from 'zustand/middleware'
 
 function getAbsolutePosition(
@@ -134,6 +135,10 @@ interface EditorState {
     hoveredElementId: string | null
     insertIndex: number | null
 
+    // Snap guides (cleared on mouse-up)
+    snapLines: SnapLine[]
+    setSnapLines: (lines: SnapLine[]) => void
+
     // Actions
     setInteractionMode: (mode: InteractionState['mode'], activeId?: string, handle?: string) => void
     addElement: (element: EditorElement) => void
@@ -191,6 +196,8 @@ export const useEditorStore = create<EditorState>()(
             leftSidebarTab: 'layers',
             hoveredElementId: null,
             insertIndex: null,
+            snapLines: [],
+            setSnapLines: (lines) => set({ snapLines: lines }),
             editingId: null,
             setEditingId: (id) => set({ editingId: id }),
 
