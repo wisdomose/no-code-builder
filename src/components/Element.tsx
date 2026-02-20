@@ -95,6 +95,8 @@ function useElementDrag(
     const store = useEditorStore.getState();
     if (store.editingId === element.id) return;
     if (e.button !== 0) return;
+    // #Phase2: block interaction when locked
+    if (element.locked) return;
     e.stopPropagation();
 
     store.saveHistory();
@@ -362,6 +364,9 @@ export const Element: React.FC<ElementProps> = React.memo(
     const setEditingId = useEditorStore((s) => s.setEditingId);
     const updateElement = useEditorStore((s) => s.updateElement);
 
+    // Phase 2: visibility
+    if (element.visible === false) return null;
+
     // #11: Memoize child elements to avoid O(n) on every render
     const elements = useEditorStore((s) => s.elements);
     const directChildren = React.useMemo(
@@ -410,8 +415,14 @@ export const Element: React.FC<ElementProps> = React.memo(
               style={{
                 color: props.color,
                 fontSize: `${props.fontSize || 14}px`,
+                fontFamily: props.fontFamily,
                 fontWeight: props.fontWeight,
+                fontStyle: props.fontStyle,
+                textDecoration: props.textDecoration,
+                textTransform:
+                  props.textTransform as React.CSSProperties["textTransform"],
                 textAlign: props.textAlign,
+                lineHeight: props.lineHeight,
                 letterSpacing: props.letterSpacing,
                 opacity: props.opacity,
               }}
@@ -431,7 +442,15 @@ export const Element: React.FC<ElementProps> = React.memo(
                 backgroundColor: props.background,
                 color: props.color,
                 borderRadius: `${props.borderRadius || 4}px`,
+                borderWidth: props.borderWidth
+                  ? `${props.borderWidth}px`
+                  : undefined,
+                borderColor: props.borderColor,
+                borderStyle:
+                  props.borderStyle ||
+                  (props.borderWidth ? "solid" : undefined),
                 fontSize: `${props.fontSize || 14}px`,
+                fontFamily: props.fontFamily,
                 fontWeight: props.fontWeight,
                 opacity: props.opacity,
                 boxShadow: props.boxShadow,
@@ -444,10 +463,17 @@ export const Element: React.FC<ElementProps> = React.memo(
           return (
             <img
               src={props.src || "https://placehold.co/400x300?text=Image"}
-              alt="Element"
+              alt={element.name || "Element"}
               className="w-full h-full object-cover pointer-events-none"
               style={{
                 borderRadius: `${props.borderRadius || 0}px`,
+                borderWidth: props.borderWidth
+                  ? `${props.borderWidth}px`
+                  : undefined,
+                borderColor: props.borderColor,
+                borderStyle:
+                  props.borderStyle ||
+                  (props.borderWidth ? "solid" : undefined),
                 opacity: props.opacity,
                 boxShadow: props.boxShadow,
               }}
@@ -461,10 +487,33 @@ export const Element: React.FC<ElementProps> = React.memo(
               className="w-full h-full"
               style={{
                 backgroundColor: props.background,
+                backgroundImage: props.backgroundImage,
+                backgroundSize:
+                  props.backgroundSize ??
+                  (props.backgroundImage ? "cover" : undefined),
+                backgroundPosition:
+                  props.backgroundPosition ??
+                  (props.backgroundImage ? "center center" : undefined),
+                backgroundRepeat:
+                  props.backgroundRepeat ??
+                  (props.backgroundImage ? "no-repeat" : undefined),
                 borderRadius: `${props.borderRadius || 0}px`,
-                border: props.background ? "none" : "1px dashed #ccc",
+                borderWidth: props.borderWidth
+                  ? `${props.borderWidth}px`
+                  : undefined,
+                borderColor: props.borderColor,
+                borderStyle:
+                  props.borderStyle ||
+                  (props.borderWidth ? "solid" : undefined),
+                border:
+                  !props.background &&
+                  !props.borderWidth &&
+                  !props.backgroundImage
+                    ? "1px dashed #ccc"
+                    : undefined,
                 display: props.display || "flex",
                 flexDirection: props.flexDirection,
+                flexWrap: props.flexWrap,
                 gridTemplateColumns: props.gridTemplateColumns,
                 gridTemplateRows: props.gridTemplateRows,
                 alignItems: props.alignItems,
@@ -474,6 +523,7 @@ export const Element: React.FC<ElementProps> = React.memo(
                   typeof props.padding === "number"
                     ? `${props.padding}px`
                     : props.padding,
+                overflow: props.overflow,
                 opacity: props.opacity,
                 boxShadow: props.boxShadow,
               }}
@@ -525,6 +575,9 @@ export const Element: React.FC<ElementProps> = React.memo(
               : `${element.props.height}px`,
           zIndex: isDragging ? 200 : element.props.zIndex || 1,
           flexShrink: 0,
+          alignSelf: element.props.alignSelf,
+          transform: element.props.transform,
+          cursor: element.locked ? "not-allowed" : "default",
         }}
         className={`
         group pointer-events-auto

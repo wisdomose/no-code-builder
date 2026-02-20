@@ -26,6 +26,10 @@ export interface EditorElement {
     type: 'text' | 'image' | 'button' | 'container' | 'div'
     parentId?: string
     index?: number
+    // Element metadata
+    name?: string
+    visible?: boolean
+    locked?: boolean
     props: {
         x: number
         y: number
@@ -33,27 +37,46 @@ export interface EditorElement {
         height: number | 'auto'
         text?: string
         src?: string
+        // Background
         background?: string
-        color?: string
-        zIndex?: number
-        fontSize?: number
+        backgroundImage?: string
+        backgroundSize?: 'cover' | 'contain' | 'auto' | '100% 100%'
+        backgroundPosition?: string
+        backgroundRepeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y'
+        // Border
         borderRadius?: number
+        borderWidth?: number
+        borderColor?: string
+        borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
+        // Stacking
+        zIndex?: number
         // Layout
         display?: 'flex' | 'block' | 'grid'
         flexDirection?: 'row' | 'column'
+        flexWrap?: 'wrap' | 'nowrap'
         gridTemplateColumns?: string
         gridTemplateRows?: string
         alignItems?: 'start' | 'center' | 'end' | 'stretch'
         justifyContent?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly' | 'stretch'
+        alignSelf?: 'auto' | 'start' | 'center' | 'end' | 'stretch'
         gap?: number
         padding?: number | string
+        overflow?: 'visible' | 'hidden' | 'scroll' | 'auto'
         // Typography
+        color?: string
+        fontSize?: number
+        fontFamily?: string
         fontWeight?: number | string
-        letterSpacing?: string
+        fontStyle?: 'normal' | 'italic'
+        textDecoration?: 'none' | 'underline' | 'line-through'
+        textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
         textAlign?: 'left' | 'center' | 'right' | 'justify'
+        lineHeight?: number | string
+        letterSpacing?: string
         // Effects
         opacity?: number
         boxShadow?: string
+        transform?: string
     }
 }
 

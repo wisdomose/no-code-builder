@@ -38,11 +38,13 @@ export function SizePositionPanel({
           label="W"
           value={element.props.width}
           onChange={(v) => onPropChange("width", v)}
+          min={1}
         />
         <Control
           label="H"
           value={element.props.height}
           onChange={(v) => onPropChange("height", v)}
+          min={1}
         />
       </div>
     </Section>

@@ -1,23 +1,27 @@
 /**
- * PropertyInspector — thin orchestrator that composes the inspector panels.
- * All heavy lifting lives in ./inspector/ sub-components.
+ * PropertyInspector — thin orchestrator composing all inspector panels.
  */
 import React from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
-import { Type, Maximize2 } from "lucide-react";
+import { Type, Maximize2, Lock, EyeOff } from "lucide-react";
 import { SizePositionPanel } from "./inspector/SizePositionPanel";
 import { TypographyPanel } from "./inspector/TypographyPanel";
 import { FillStrokePanel } from "./inspector/FillStrokePanel";
 import { LayoutPanel } from "./inspector/LayoutPanel";
+import { EffectsPanel } from "./inspector/EffectsPanel";
+import { ImagePanel } from "./inspector/ImagePanel";
 
 export const PropertyInspector: React.FC = () => {
   const { selectedId, elements, updateElement } = useEditorStore();
   const element = selectedId ? elements[selectedId] : null;
+
   const [expandedSections, setExpandedSections] = React.useState<string[]>([
     "Size & Position",
     "Typography",
     "Fill & Stroke",
     "Layout",
+    "Image",
+    "Effects",
   ]);
 
   if (!element) {
@@ -43,26 +47,52 @@ export const PropertyInspector: React.FC = () => {
     );
 
   const isContainer = element.type === "container" || element.type === "div";
+  const isText = element.type === "text";
+  const isImage = element.type === "image";
 
   return (
     <div className="flex-1 overflow-y-auto space-y-px bg-border/20">
-      {/* Selection Summary */}
+      {/* Selection Summary + name edit */}
       <div className="p-4 bg-surface border-b border-border">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="p-1.5 rounded bg-primary/10 text-primary">
-            {element.type === "text" ? (
-              <Type size={14} />
-            ) : (
-              <Maximize2 size={14} />
-            )}
+        <div className="flex items-center gap-2 mb-2">
+          <span className="p-1.5 rounded bg-primary/10 text-primary shrink-0">
+            {isText ? <Type size={14} /> : <Maximize2 size={14} />}
           </span>
-          <span className="text-[13px] font-bold text-text-main">
-            {element.id}
-          </span>
+          <input
+            type="text"
+            value={element.name || ""}
+            onChange={(e) => {
+              const name = e.target.value;
+              useEditorStore.setState((s) => ({
+                elements: {
+                  ...s.elements,
+                  [element.id]: { ...s.elements[element.id], name },
+                },
+              }));
+            }}
+            placeholder={element.id}
+            className="flex-1 min-w-0 bg-transparent text-[13px] font-bold text-text-main outline-none placeholder:text-text-muted/50 focus:border-b focus:border-primary pb-0.5 transition-colors"
+          />
         </div>
-        <p className="text-[10px] text-text-muted font-medium uppercase tracking-widest">
-          {element.type} Layer
-        </p>
+
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-text-muted font-medium uppercase tracking-widest">
+            {element.type} Layer
+          </p>
+          {/* Visibility and Lock badges */}
+          <div className="flex items-center gap-1.5">
+            {element.visible === false && (
+              <span className="flex items-center gap-1 text-[9px] font-bold uppercase text-text-muted px-1.5 py-0.5 rounded bg-background border border-border">
+                <EyeOff size={10} /> Hidden
+              </span>
+            )}
+            {element.locked && (
+              <span className="flex items-center gap-1 text-[9px] font-bold uppercase text-amber-400 px-1.5 py-0.5 rounded bg-background border border-border">
+                <Lock size={10} /> Locked
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       <SizePositionPanel
@@ -72,7 +102,7 @@ export const PropertyInspector: React.FC = () => {
         onPropChange={handlePropChange}
       />
 
-      {element.type === "text" && (
+      {isText && (
         <TypographyPanel
           element={element}
           isExpanded={expandedSections.includes("Typography")}
@@ -90,10 +120,26 @@ export const PropertyInspector: React.FC = () => {
         />
       )}
 
+      {isImage && (
+        <ImagePanel
+          element={element}
+          isExpanded={expandedSections.includes("Image")}
+          onToggle={() => toggle("Image")}
+          onPropChange={handlePropChange}
+        />
+      )}
+
       <FillStrokePanel
         element={element}
         isExpanded={expandedSections.includes("Fill & Stroke")}
         onToggle={() => toggle("Fill & Stroke")}
+        onPropChange={handlePropChange}
+      />
+
+      <EffectsPanel
+        element={element}
+        isExpanded={expandedSections.includes("Effects")}
+        onToggle={() => toggle("Effects")}
         onPropChange={handlePropChange}
       />
     </div>
