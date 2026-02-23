@@ -10,12 +10,12 @@ export function SizePositionPanel({
   element,
   isExpanded,
   onToggle,
-  onPropChange,
+  onLayoutChange,
 }: {
   element: EditorElement;
   isExpanded: boolean;
   onToggle: () => void;
-  onPropChange: (key: string, value: any) => void;
+  onLayoutChange: (key: string, value: any) => void;
 }) {
   return (
     <Section
@@ -27,38 +27,38 @@ export function SizePositionPanel({
       <div className="grid grid-cols-2 gap-x-3 gap-y-3">
         <Control
           label="X"
-          value={element.props.x}
-          onChange={(v) => onPropChange("x", v)}
+          value={element.layout.x ?? ""}
+          onChange={(v) => onLayoutChange("x", v)}
         />
         <Control
           label="Y"
-          value={element.props.y}
-          onChange={(v) => onPropChange("y", v)}
+          value={element.layout.y ?? ""}
+          onChange={(v) => onLayoutChange("y", v)}
         />
         <Control
           label="W"
-          value={element.props.width}
-          onChange={(v) => onPropChange("width", v)}
+          value={element.layout.width}
+          onChange={(v) => onLayoutChange("width", v)}
           onToggleAuto={() => {
-            if (element.props.width === "auto") {
+            if (element.layout.width === "auto") {
               const node = getElementRef(element.id);
-              onPropChange("width", node ? node.offsetWidth : 100);
+              onLayoutChange("width", node ? node.offsetWidth : 100);
             } else {
-              onPropChange("width", "auto");
+              onLayoutChange("width", "auto");
             }
           }}
           min={1}
         />
         <Control
           label="H"
-          value={element.props.height}
-          onChange={(v) => onPropChange("height", v)}
+          value={element.layout.height}
+          onChange={(v) => onLayoutChange("height", v)}
           onToggleAuto={() => {
-            if (element.props.height === "auto") {
+            if (element.layout.height === "auto") {
               const node = getElementRef(element.id);
-              onPropChange("height", node ? node.offsetHeight : 100);
+              onLayoutChange("height", node ? node.offsetHeight : 100);
             } else {
-              onPropChange("height", "auto");
+              onLayoutChange("height", "auto");
             }
           }}
           min={1}

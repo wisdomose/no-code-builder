@@ -64,7 +64,7 @@ export const SectionLibrary: React.FC = () => {
   const insertAt = (
     factory: (x: number, y: number) => ReturnType<typeof createHeroSection>,
   ) => {
-    addElements(factory(300, 200));
+    addElements(factory(300, 200) as any);
   };
 
   const CATEGORIES: CategoryDef[] = useMemo(

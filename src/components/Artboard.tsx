@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { useEditorStore } from "@/lib/useEditorStore";
+import { useEditorStore, type EditorElement } from "@/lib/useEditorStore";
 import { Element as EditorElementComponent } from "./Element";
 import { SnapOverlay } from "./SnapOverlay";
 import { EditorOverlay } from "./EditorOverlay";
@@ -8,15 +8,16 @@ export const Artboard: React.FC = () => {
   const artboard = useEditorStore((s) => s.artboard);
   const setArtboard = useEditorStore((s) => s.setArtboard);
   const setSelectedId = useEditorStore((s) => s.setSelectedId);
+  const rootElementsIds = useEditorStore((s) => s.rootElements);
   const elements = useEditorStore((s) => s.elements);
   const artboardRef = useRef<HTMLDivElement>(null);
 
   const rootElements = React.useMemo(
     () =>
-      Object.values(elements)
-        .filter((el) => !el.parentId)
-        .sort((a, b) => (a.index || 0) - (b.index || 0)),
-    [elements],
+      rootElementsIds
+        .map((id) => elements[id])
+        .filter(Boolean) as EditorElement[],
+    [elements, rootElementsIds],
   );
 
   // ── Vertical resize handle ─────────────────────────────────────────────────

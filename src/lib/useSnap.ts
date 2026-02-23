@@ -95,13 +95,13 @@ export function getSnapResult(
     const peerRects: Rect[] = [];
 
     for (const el of peers) {
-        if (typeof el.props.width !== "number" || typeof el.props.height !== "number")
+        if (typeof el.layout.width !== "number" || typeof el.layout.height !== "number")
             continue;
         const r: Rect = {
-            x: el.props.x,
-            y: el.props.y,
-            w: el.props.width as number,
-            h: el.props.height as number,
+            x: el.layout.x ?? 0,
+            y: el.layout.y ?? 0,
+            w: el.layout.width as number,
+            h: el.layout.height as number,
         };
         peerRects.push(r);
         peerXTargets.push(...targetEdges(r, "x"));
@@ -175,8 +175,8 @@ export function computeArtboardHeight(
     let maxBottom = 0;
     for (const el of Object.values(elements)) {
         if (el.parentId) continue; // only root-level elements
-        const h = typeof el.props.height === "number" ? el.props.height : 0;
-        const bottom = el.props.y + h;
+        const h = typeof el.layout.height === "number" ? el.layout.height : 0;
+        const bottom = (el.layout.y ?? 0) + h;
         if (bottom > maxBottom) maxBottom = bottom;
     }
     return Math.max(minHeight, maxBottom + padding);

@@ -59,9 +59,12 @@ export const ToolBar: React.FC = () => {
     }
 
     addElement({
-      id,
+      id: id,
       type,
-      props,
+      parentId: undefined,
+      layout: { x: 100, y: 100, width: 200, height: 100 },
+      style: { background: "#ffffff", color: "#000000" },
+      content: type === "text" ? "New Text" : undefined,
     });
   };
 

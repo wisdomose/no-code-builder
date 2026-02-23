@@ -44,12 +44,14 @@ export function FillStrokePanel({
   element,
   isExpanded,
   onToggle,
-  onPropChange,
+  onStyleChange,
+  onLayoutChange,
 }: {
   element: EditorElement;
   isExpanded: boolean;
   onToggle: () => void;
-  onPropChange: (key: string, value: any) => void;
+  onStyleChange: (key: string, value: any) => void;
+  onLayoutChange: (key: string, value: any) => void;
 }) {
   return (
     <Section
@@ -67,11 +69,11 @@ export function FillStrokePanel({
           <ColorPicker
             color={
               (element.type === "text"
-                ? element.props.color
-                : element.props.background) || "#ffffff"
+                ? element.style.color
+                : element.style.background) || "#ffffff"
             }
             onChange={(newColor) =>
-              onPropChange(
+              onStyleChange(
                 element.type === "text" ? "color" : "background",
                 newColor,
               )
@@ -83,14 +85,14 @@ export function FillStrokePanel({
         <div className="grid grid-cols-2 gap-3">
           <Control
             label="Radius"
-            value={element.props.borderRadius || 0}
-            onChange={(v) => onPropChange("borderRadius", v)}
+            value={element.style.borderRadius || 0}
+            onChange={(v) => onStyleChange("borderRadius", v)}
             min={0}
           />
           <Control
             label="Z Index"
-            value={element.props.zIndex || 1}
-            onChange={(v) => onPropChange("zIndex", v)}
+            value={element.layout.zIndex || 1}
+            onChange={(v) => onLayoutChange("zIndex", v)}
             min={0}
           />
         </div>
@@ -104,15 +106,15 @@ export function FillStrokePanel({
           <div className="grid grid-cols-2 gap-3">
             <Control
               label="Width"
-              value={element.props.borderWidth || 0}
-              onChange={(v) => onPropChange("borderWidth", v)}
+              value={element.style.borderWidth || 0}
+              onChange={(v) => onStyleChange("borderWidth", v)}
               min={0}
             />
             <CustomSelect
               label="Style"
-              value={element.props.borderStyle || "solid"}
+              value={element.style.borderStyle || "solid"}
               options={BORDER_STYLE_OPTIONS as any}
-              onChange={(v) => onPropChange("borderStyle", v)}
+              onChange={(v) => onStyleChange("borderStyle", v)}
             />
           </div>
 
@@ -121,8 +123,8 @@ export function FillStrokePanel({
               Border Color
             </span>
             <ColorPicker
-              color={element.props.borderColor || "#000000"}
-              onChange={(c) => onPropChange("borderColor", c)}
+              color={element.style.borderColor || "#000000"}
+              onChange={(c) => onStyleChange("borderColor", c)}
             />
           </div>
         </div>

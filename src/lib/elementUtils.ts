@@ -28,6 +28,6 @@ export function cloneElement(
         ...el,
         id: newId,
         parentId: newParentId,
-        props: { ...el.props, x: el.props.x + offsetX, y: el.props.y + offsetY },
+        layout: { ...el.layout, x: (el.layout.x ?? 0) + offsetX, y: (el.layout.y ?? 0) + offsetY },
     };
 }

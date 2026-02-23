@@ -215,7 +215,7 @@ function BackgroundImageSuite({
   onPropChange: (key: string, value: any) => void;
 }) {
   const rawUrl =
-    element.props.backgroundImage
+    element.style.backgroundImage
       ?.replace(/^url\(["']?/, "")
       .replace(/["']?\)$/, "") ?? "";
 
@@ -237,9 +237,9 @@ function BackgroundImageSuite({
     ["bottom left", "bottom center", "bottom right"],
   ];
   const currentPos =
-    (element as any).props.backgroundPosition ?? "center center";
-  const currentSize = (element as any).props.backgroundSize ?? "cover";
-  const currentRepeat = (element as any).props.backgroundRepeat ?? "no-repeat";
+    (element as any).style.backgroundPosition ?? "center center";
+  const currentSize = (element as any).style.backgroundSize ?? "cover";
+  const currentRepeat = (element as any).style.backgroundRepeat ?? "no-repeat";
 
   return (
     <div className="space-y-4">
@@ -381,16 +381,16 @@ export function EffectsPanel({
   element,
   isExpanded,
   onToggle,
-  onPropChange,
+  onStyleChange,
 }: {
   element: EditorElement;
   isExpanded: boolean;
   onToggle: () => void;
-  onPropChange: (key: string, value: any) => void;
+  onStyleChange: (key: string, value: any) => void;
 }) {
   const rotationDeg = (() => {
-    if (!element.props.transform) return 0;
-    const m = element.props.transform.match(/rotate\(([^)]+)deg\)/);
+    if (!element.style.transform) return 0;
+    const m = element.style.transform.match(/rotate\(([^)]+)deg\)/);
     return m ? parseFloat(m[1]) : 0;
   })();
 
@@ -407,8 +407,8 @@ export function EffectsPanel({
         {/* Opacity */}
         <SliderInput
           label="Opacity"
-          value={(element.props.opacity ?? 1) * 100}
-          onChange={(v) => onPropChange("opacity", Math.round(v) / 100)}
+          value={(element.style.opacity ?? 1) * 100}
+          onChange={(v) => onStyleChange("opacity", Math.round(v) / 100)}
           min={0}
           max={100}
           step={1}
@@ -422,7 +422,7 @@ export function EffectsPanel({
           value={rotationDeg}
           onChange={(v) => {
             const deg = Math.round(v);
-            onPropChange("transform", deg === 0 ? "" : `rotate(${deg}deg)`);
+            onStyleChange("transform", deg === 0 ? "" : `rotate(${deg}deg)`);
           }}
           min={-180}
           max={180}
@@ -438,8 +438,8 @@ export function EffectsPanel({
               Shadow
             </span>
             <ShadowBuilder
-              value={element.props.boxShadow || ""}
-              onChange={(v) => onPropChange("boxShadow", v)}
+              value={element.style.boxShadow || ""}
+              onChange={(v) => onStyleChange("boxShadow", v)}
             />
           </div>
         </div>
@@ -452,7 +452,7 @@ export function EffectsPanel({
             </span>
             <BackgroundImageSuite
               element={element}
-              onPropChange={onPropChange}
+              onPropChange={onStyleChange}
             />
           </div>
         )}

@@ -46,9 +46,9 @@ function LayerItem({
   const isLocked = el.locked === true;
   const displayName = el.name || el.id;
 
-  const children = Object.values(elements)
-    .filter((child) => child.parentId === el.id)
-    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  const children = (el.children || [])
+    .map((id) => elements[id])
+    .filter(Boolean);
 
   return (
     <div>
@@ -125,16 +125,19 @@ function LayerItem({
         </div>
       </div>
 
-      {children.map((child) => (
-        <LayerItem
-          key={child.id}
-          el={child}
-          depth={depth + 1}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          elements={elements}
-        />
-      ))}
+      {el.children?.map((childId) => {
+        const childEl = elements[childId];
+        return childEl ? (
+          <LayerItem
+            key={childId}
+            el={childEl}
+            depth={depth + 1}
+            selectedId={selectedId}
+            onSelect={onSelect}
+            elements={elements}
+          />
+        ) : null;
+      })}
     </div>
   );
 }
@@ -144,12 +147,14 @@ export const LayerTree: React.FC = () => {
   const selectedId = useEditorStore((s) => s.selectedId);
   const setSelectedId = useEditorStore((s) => s.setSelectedId);
 
+  const rootElementsIds = useEditorStore((s) => s.rootElements);
+
   const rootElements = React.useMemo(
     () =>
-      Object.values(elements)
-        .filter((el) => !el.parentId)
-        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
-    [elements],
+      rootElementsIds
+        .map((id) => elements[id])
+        .filter(Boolean) as EditorElement[],
+    [elements, rootElementsIds],
   );
 
   return (

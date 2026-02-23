@@ -17,14 +17,14 @@ export function getAbsolutePosition(
     element: EditorElement,
     elements: Record<string, EditorElement>
 ): { x: number; y: number } {
-    let x = element.props.x
-    let y = element.props.y
+    let x = (element.layout?.position === 'absolute' ? element.layout.x : 0) ?? 0
+    let y = (element.layout?.position === 'absolute' ? element.layout.y : 0) ?? 0
     let current = element
     while (current.parentId) {
         const parent = elements[current.parentId]
         if (!parent) break
-        x += parent.props.x
-        y += parent.props.y
+        x += (parent.layout?.position === 'absolute' ? parent.layout.x : 0) ?? 0
+        y += (parent.layout?.position === 'absolute' ? parent.layout.y : 0) ?? 0
         current = parent
     }
     return { x, y }
@@ -32,65 +32,66 @@ export function getAbsolutePosition(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface ElementLayout {
+    position?: 'absolute' | 'flow'
+    x?: number
+    y?: number
+    width: number | 'auto' | '100%'
+    height: number | 'auto' | '100%'
+    display?: 'flex' | 'block' | 'grid'
+    flexDirection?: 'row' | 'column'
+    flexWrap?: 'wrap' | 'nowrap'
+    gridTemplateColumns?: string
+    gridTemplateRows?: string
+    alignItems?: 'start' | 'center' | 'end' | 'stretch'
+    justifyContent?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly' | 'stretch'
+    alignSelf?: 'auto' | 'start' | 'center' | 'end' | 'stretch'
+    gap?: number
+    padding?: number | string
+    overflow?: 'visible' | 'hidden' | 'scroll' | 'auto'
+    zIndex?: number
+}
+
+export interface ElementStyle {
+    background?: string
+    backgroundImage?: string
+    backgroundSize?: 'cover' | 'contain' | 'auto' | '100% 100%'
+    backgroundPosition?: string
+    backgroundRepeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y'
+    borderRadius?: number
+    borderWidth?: number
+    borderColor?: string
+    borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
+    color?: string
+    fontSize?: number
+    fontFamily?: string
+    fontWeight?: number | string
+    fontStyle?: 'normal' | 'italic'
+    textDecoration?: 'none' | 'underline' | 'line-through'
+    textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+    textAlign?: 'left' | 'center' | 'right' | 'justify'
+    lineHeight?: number | string
+    letterSpacing?: string
+    opacity?: number
+    boxShadow?: string
+    transform?: string
+}
+
 /**
  * Core element types for the editor.
  */
 export interface EditorElement {
     id: string
     type: 'text' | 'image' | 'button' | 'container' | 'div'
-    parentId?: string
-    index?: number
     name?: string
+    parentId?: string
+    children?: string[]
     visible?: boolean
     locked?: boolean
-    props: {
-        x: number
-        y: number
-        width: number | 'auto'
-        height: number | 'auto'
-        text?: string
-        src?: string
-        // Background
-        background?: string
-        backgroundImage?: string
-        backgroundSize?: 'cover' | 'contain' | 'auto' | '100% 100%'
-        backgroundPosition?: string
-        backgroundRepeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y'
-        // Border
-        borderRadius?: number
-        borderWidth?: number
-        borderColor?: string
-        borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double' | 'none'
-        // Stacking
-        zIndex?: number
-        // Layout
-        display?: 'flex' | 'block' | 'grid'
-        flexDirection?: 'row' | 'column'
-        flexWrap?: 'wrap' | 'nowrap'
-        gridTemplateColumns?: string
-        gridTemplateRows?: string
-        alignItems?: 'start' | 'center' | 'end' | 'stretch'
-        justifyContent?: 'start' | 'center' | 'end' | 'space-between' | 'space-around' | 'space-evenly' | 'stretch'
-        alignSelf?: 'auto' | 'start' | 'center' | 'end' | 'stretch'
-        gap?: number
-        padding?: number | string
-        overflow?: 'visible' | 'hidden' | 'scroll' | 'auto'
-        // Typography
-        color?: string
-        fontSize?: number
-        fontFamily?: string
-        fontWeight?: number | string
-        fontStyle?: 'normal' | 'italic'
-        textDecoration?: 'none' | 'underline' | 'line-through'
-        textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-        textAlign?: 'left' | 'center' | 'right' | 'justify'
-        lineHeight?: number | string
-        letterSpacing?: string
-        // Effects
-        opacity?: number
-        boxShadow?: string
-        transform?: string
-    }
+    layout: ElementLayout
+    style: ElementStyle
+    content?: string
+    index?: number
 }
 
 interface CameraState {
@@ -126,6 +127,7 @@ interface HistoryState {
 interface EditorState {
     // Elements
     elements: Record<string, EditorElement>
+    rootElements: string[]
     selectedId: string | null
     interactionState: InteractionState
 
@@ -156,8 +158,8 @@ interface EditorState {
     setInteractionMode: (mode: InteractionState['mode'], activeId?: string, handle?: string) => void
     addElement: (element: EditorElement) => void
     addElements: (elements: EditorElement[]) => void
-    updateElement: (id: string, props: Partial<EditorElement['props']>) => void
-    updateElements: (updates: { id: string; props: Partial<EditorElement['props']> }[]) => void
+    updateElement: (id: string, layout?: Partial<ElementLayout>, style?: Partial<ElementStyle>, content?: string) => void
+    updateElements: (updates: { id: string; layout?: Partial<ElementLayout>, style?: Partial<ElementStyle>, content?: string }[]) => void
     /** Updates top-level element metadata (name, visible, locked) — not props. */
     updateElementMeta: (id: string, meta: Partial<Pick<EditorElement, 'name' | 'visible' | 'locked'>>) => void
     removeElement: (id: string) => void
@@ -199,6 +201,7 @@ export const useEditorStore = create<EditorState>()(
     persist(
         (set, get) => ({
             elements: INITIAL_ELEMENTS,
+            rootElements: [],
             selectedId: null,
 
             camera: { scale: 1, x: 0, y: 0 },
@@ -235,7 +238,8 @@ export const useEditorStore = create<EditorState>()(
             addElement: (element) => {
                 get().saveHistory()
                 set((state) => ({
-                    elements: { ...state.elements, [element.id]: element }
+                    elements: { ...state.elements, [element.id]: element },
+                    rootElements: element.parentId ? state.rootElements : [...state.rootElements, element.id]
                 }))
             },
 
@@ -243,19 +247,45 @@ export const useEditorStore = create<EditorState>()(
                 get().saveHistory()
                 set((state) => {
                     const next = { ...state.elements }
-                    for (const el of elements) next[el.id] = el
-                    return { elements: next }
+                    const nextRoot = [...state.rootElements]
+                    // Track how many children each parent already has so we can
+                    // auto-assign sequential indices to elements that omit index.
+                    const parentChildCount = new Map<string, number>()
+
+                    for (const el of elements) {
+                        let index = el.index
+                        if (index === undefined && el.parentId) {
+                            if (!parentChildCount.has(el.parentId)) {
+                                const existing = Object.values(next).filter(
+                                    (e) => e.parentId === el.parentId,
+                                ).length
+                                parentChildCount.set(el.parentId, existing)
+                            }
+                            index = parentChildCount.get(el.parentId)!
+                            parentChildCount.set(el.parentId, index + 1)
+                        }
+                        next[el.id] = { ...el, index } as EditorElement
+                        if (!el.parentId && !nextRoot.includes(el.id)) {
+                            nextRoot.push(el.id)
+                        }
+                    }
+                    return { elements: next, rootElements: nextRoot }
                 })
             },
 
-            updateElement: (id, props) => {
+            updateElement: (id, layout, style, content) => {
                 set((state) => {
                     const element = state.elements[id]
                     if (!element) return state
                     return {
                         elements: {
                             ...state.elements,
-                            [id]: { ...element, props: { ...element.props, ...props } }
+                            [id]: {
+                                ...element,
+                                layout: layout ? { ...element.layout, ...layout } : element.layout,
+                                style: style ? { ...element.style, ...style } : element.style,
+                                content: content !== undefined ? content : element.content
+                            }
                         }
                     }
                 })
@@ -264,9 +294,16 @@ export const useEditorStore = create<EditorState>()(
             updateElements: (updates) => {
                 set((state) => {
                     const next = { ...state.elements }
-                    for (const { id, props } of updates) {
+                    for (const { id, layout, style, content } of updates) {
                         const el = next[id]
-                        if (el) next[id] = { ...el, props: { ...el.props, ...props } }
+                        if (el) {
+                            next[id] = {
+                                ...el,
+                                layout: layout ? { ...el.layout, ...layout } : el.layout,
+                                style: style ? { ...el.style, ...style } : el.style,
+                                content: content !== undefined ? content : el.content
+                            }
+                        }
                     }
                     return { elements: next }
                 })
@@ -301,6 +338,7 @@ export const useEditorStore = create<EditorState>()(
                     )
                     return {
                         elements: remaining,
+                        rootElements: state.rootElements.filter((rid) => !toDelete.has(rid)),
                         selectedId: toDelete.has(state.selectedId ?? '') ? null : state.selectedId,
                     }
                 })
@@ -329,16 +367,27 @@ export const useEditorStore = create<EditorState>()(
                     }
                 }
 
-                set((s) => ({
-                    elements: {
-                        ...s.elements,
-                        [id]: {
-                            ...element,
-                            parentId: newParentId,
-                            props: { ...element.props, x: newX, y: newY }
-                        }
+                set((s) => {
+                    const wasRoot = !element.parentId
+                    const becomesRoot = !newParentId
+                    let nextRootElements = s.rootElements
+                    if (wasRoot && !becomesRoot) {
+                        nextRootElements = s.rootElements.filter((rid) => rid !== id)
+                    } else if (!wasRoot && becomesRoot && !s.rootElements.includes(id)) {
+                        nextRootElements = [...s.rootElements, id]
                     }
-                }))
+                    return {
+                        elements: {
+                            ...s.elements,
+                            [id]: {
+                                ...element,
+                                parentId: newParentId,
+                                layout: { ...element.layout, x: newX, y: newY }
+                            }
+                        },
+                        rootElements: nextRootElements,
+                    }
+                })
             },
 
             setHoveredElementId: (id) => set({ hoveredElementId: id }),

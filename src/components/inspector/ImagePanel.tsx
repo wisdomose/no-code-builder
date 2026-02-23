@@ -9,12 +9,12 @@ export function ImagePanel({
   element,
   isExpanded,
   onToggle,
-  onPropChange,
+  onContentChange,
 }: {
   element: EditorElement;
   isExpanded: boolean;
   onToggle: () => void;
-  onPropChange: (key: string, value: any) => void;
+  onContentChange: (content: string) => void;
 }) {
   return (
     <Section
@@ -25,10 +25,10 @@ export function ImagePanel({
     >
       <div className="space-y-3">
         {/* Preview */}
-        {element.props.src && (
+        {element.content && (
           <div className="w-full h-20 rounded-lg overflow-hidden border border-border/50 bg-background/50">
             <img
-              src={element.props.src}
+              src={element.content}
               alt="preview"
               className="w-full h-full object-cover"
             />
@@ -42,8 +42,8 @@ export function ImagePanel({
           </span>
           <input
             type="text"
-            value={element.props.src || ""}
-            onChange={(e) => onPropChange("src", e.target.value)}
+            value={element.content || ""}
+            onChange={(e) => onContentChange(e.target.value)}
             placeholder="https://..."
             className="w-full bg-background/50 border border-border/50 rounded-lg px-2 py-1.5 text-[11px] font-mono text-text-main focus:border-primary outline-none transition-all"
           />

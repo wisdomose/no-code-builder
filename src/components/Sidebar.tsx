@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="h-10 border-b border-border flex items-center px-2 shrink-0 bg-background/30">
         {!isCollapsed ? (
           <>
-            <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-[0.1em] text-text-muted truncate flex-1">
+            <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-widest text-text-muted truncate flex-1">
               <span className="text-primary/70">{icon}</span>
               <span>{title}</span>
             </div>

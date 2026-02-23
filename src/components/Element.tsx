@@ -42,38 +42,43 @@ export const Element: React.FC<ElementProps> = React.memo(
       () =>
         Object.values(elements)
           .filter((el) => el.parentId === element.id)
-          .sort((a, b) => (a.index || 0) - (b.index || 0)),
+          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
       [elements, element.id],
     );
 
     const parent = element.parentId ? elements[element.parentId] : null;
     const isParentFlow =
-      parent?.props.display === "flex" || parent?.props.display === "grid";
+      parent?.layout?.display === "flex" || parent?.layout?.display === "grid";
 
     const { handleMouseDown, handleTouchStart } = useElementDrag(
       element,
       isParentFlow,
     );
 
+    const fillWidth =
+      typeof element.layout.width === "number" ? "w-full" : "w-auto";
+    const fillHeight =
+      typeof element.layout.height === "number" ? "h-full" : "h-auto";
+
     const renderContent = () => {
-      const { type, props } = element;
+      const { type, layout, style, content } = element;
       switch (type) {
         case "text":
           if (isEditing) {
             return (
               <TextEditor
-                initialText={props.text || ""}
-                className="w-full h-full min-h-[1em]"
+                initialText={content || ""}
+                className={`${fillWidth} ${fillHeight} min-h-[1em]`}
                 style={{
-                  color: props.color,
-                  fontSize: `${props.fontSize || 14}px`,
-                  fontWeight: props.fontWeight,
-                  textAlign: props.textAlign,
-                  letterSpacing: props.letterSpacing,
-                  opacity: props.opacity,
+                  color: style.color,
+                  fontSize: `${style.fontSize || 14}px`,
+                  fontWeight: style.fontWeight,
+                  textAlign: style.textAlign,
+                  letterSpacing: style.letterSpacing,
+                  opacity: style.opacity,
                 }}
                 onSave={(newText) => {
-                  updateElement(element.id, { text: newText });
+                  updateElement(element.id, undefined, undefined, newText);
                   setEditingId(null);
                 }}
                 onCancel={() => setEditingId(null)}
@@ -82,73 +87,73 @@ export const Element: React.FC<ElementProps> = React.memo(
           }
           return (
             <div
-              className="w-full h-full"
+              className={`${fillWidth} ${fillHeight}`}
               style={{
-                color: props.color,
-                fontSize: `${props.fontSize || 14}px`,
-                fontFamily: props.fontFamily,
-                fontWeight: props.fontWeight,
-                fontStyle: props.fontStyle,
-                textDecoration: props.textDecoration,
+                color: style.color,
+                fontSize: `${style.fontSize || 14}px`,
+                fontFamily: style.fontFamily,
+                fontWeight: style.fontWeight,
+                fontStyle: style.fontStyle,
+                textDecoration: style.textDecoration,
                 textTransform:
-                  props.textTransform as React.CSSProperties["textTransform"],
-                textAlign: props.textAlign,
-                lineHeight: props.lineHeight,
-                letterSpacing: props.letterSpacing,
-                opacity: props.opacity,
+                  style.textTransform as React.CSSProperties["textTransform"],
+                textAlign: style.textAlign,
+                lineHeight: style.lineHeight,
+                letterSpacing: style.letterSpacing,
+                opacity: style.opacity,
               }}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 setEditingId(element.id);
               }}
             >
-              {props.text || "Type something..."}
+              {content || "Type something..."}
             </div>
           );
         case "button":
           return (
             <div
-              className="w-full h-full flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+              className={`${fillWidth} ${fillHeight} flex items-center justify-center transition-all active:scale-95 cursor-pointer`}
               style={{
-                backgroundColor: props.background,
-                color: props.color,
-                borderRadius: `${props.borderRadius || 4}px`,
-                borderWidth: props.borderWidth
-                  ? `${props.borderWidth}px`
+                backgroundColor: style.background,
+                color: style.color,
+                borderRadius: `${style.borderRadius || 4}px`,
+                borderWidth: style.borderWidth
+                  ? `${style.borderWidth}px`
                   : undefined,
-                borderColor: props.borderColor,
+                borderColor: style.borderColor,
                 borderStyle: resolveBorderStyle(
-                  props.borderStyle,
-                  props.borderWidth,
+                  style.borderStyle,
+                  style.borderWidth,
                 ),
-                fontSize: `${props.fontSize || 14}px`,
-                fontFamily: props.fontFamily,
-                fontWeight: props.fontWeight,
-                opacity: props.opacity,
-                boxShadow: props.boxShadow,
+                fontSize: `${style.fontSize || 14}px`,
+                fontFamily: style.fontFamily,
+                fontWeight: style.fontWeight,
+                opacity: style.opacity,
+                boxShadow: style.boxShadow,
               }}
             >
-              {props.text || "Button"}
+              {content || "Button"}
             </div>
           );
         case "image":
           return (
             <img
-              src={props.src || "https://placehold.co/400x300?text=Image"}
+              src={content || "https://placehold.co/400x300?text=Image"}
               alt={element.name || "Element"}
-              className="w-full h-full object-cover pointer-events-none"
+              className={`${fillWidth} ${fillHeight} object-cover pointer-events-none`}
               style={{
-                borderRadius: `${props.borderRadius || 0}px`,
-                borderWidth: props.borderWidth
-                  ? `${props.borderWidth}px`
+                borderRadius: `${style.borderRadius || 0}px`,
+                borderWidth: style.borderWidth
+                  ? `${style.borderWidth}px`
                   : undefined,
-                borderColor: props.borderColor,
+                borderColor: style.borderColor,
                 borderStyle: resolveBorderStyle(
-                  props.borderStyle,
-                  props.borderWidth,
+                  style.borderStyle,
+                  style.borderWidth,
                 ),
-                opacity: props.opacity,
-                boxShadow: props.boxShadow,
+                opacity: style.opacity,
+                boxShadow: style.boxShadow,
               }}
             />
           );
@@ -157,58 +162,57 @@ export const Element: React.FC<ElementProps> = React.memo(
         default:
           return (
             <div
-              className="w-full h-full"
+              className={`${fillWidth} ${fillHeight}`}
               style={{
-                backgroundColor: props.background,
-                backgroundImage: props.backgroundImage,
+                backgroundColor: style.background,
+                backgroundImage: style.backgroundImage,
                 backgroundSize:
-                  props.backgroundSize ??
-                  (props.backgroundImage ? "cover" : undefined),
+                  style.backgroundSize ??
+                  (style.backgroundImage ? "cover" : undefined),
                 backgroundPosition:
-                  props.backgroundPosition ??
-                  (props.backgroundImage ? "center center" : undefined),
+                  style.backgroundPosition ??
+                  (style.backgroundImage ? "center center" : undefined),
                 backgroundRepeat:
-                  props.backgroundRepeat ??
-                  (props.backgroundImage ? "no-repeat" : undefined),
-                borderRadius: `${props.borderRadius || 0}px`,
-                borderWidth: props.borderWidth
-                  ? `${props.borderWidth}px`
+                  style.backgroundRepeat ??
+                  (style.backgroundImage ? "no-repeat" : undefined),
+                borderRadius: `${style.borderRadius || 0}px`,
+                borderWidth: style.borderWidth
+                  ? `${style.borderWidth}px`
                   : undefined,
-                borderColor: props.borderColor,
+                borderColor: style.borderColor,
                 borderStyle: resolveBorderStyle(
-                  props.borderStyle,
-                  props.borderWidth,
+                  style.borderStyle,
+                  style.borderWidth,
                 ),
                 border:
-                  !props.background &&
-                  !props.borderWidth &&
-                  !props.backgroundImage
+                  !style.background &&
+                  !style.borderWidth &&
+                  !style.backgroundImage
                     ? "1px dashed #ccc"
                     : undefined,
-                display: props.display || "flex",
-                flexDirection: props.flexDirection,
-                flexWrap: props.flexWrap,
-                gridTemplateColumns: props.gridTemplateColumns,
-                gridTemplateRows: props.gridTemplateRows,
-                alignItems: props.alignItems,
-                justifyContent: props.justifyContent,
-                gap: `${props.gap || 0}px`,
+                display: layout.display || "flex",
+                flexDirection: layout.flexDirection,
+                flexWrap: layout.flexWrap,
+                gridTemplateColumns: layout.gridTemplateColumns,
+                gridTemplateRows: layout.gridTemplateRows,
+                alignItems: layout.alignItems,
+                justifyContent: layout.justifyContent,
+                gap: `${layout.gap || 0}px`,
                 padding:
-                  typeof props.padding === "number"
-                    ? `${props.padding}px`
-                    : props.padding,
-                overflow: props.overflow,
-                opacity: props.opacity,
-                boxShadow: props.boxShadow,
+                  typeof layout.padding === "number"
+                    ? `${layout.padding}px`
+                    : layout.padding,
+                overflow: layout.overflow,
+                opacity: style.opacity,
+                boxShadow: style.boxShadow,
               }}
             >
               {directChildren.map((el, idx) => (
                 <React.Fragment key={el.id}>
-                  {/* Insertion Indicator */}
                   {isHoveredAsParent && insertIndex === idx && (
                     <div
                       className={`
-                         ${props.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
+                         ${layout.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
                          bg-[#007aff] rounded-full z-50 pointer-events-none transition-all
                      `}
                     />
@@ -216,11 +220,10 @@ export const Element: React.FC<ElementProps> = React.memo(
                   <Element element={el} />
                 </React.Fragment>
               ))}
-              {/* Final Insertion Indicator */}
               {isHoveredAsParent && insertIndex === directChildren.length && (
                 <div
                   className={`
-                      ${props.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
+                      ${layout.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
                       bg-[#007aff] rounded-full z-50 pointer-events-none transition-all
                   `}
                 />
@@ -239,24 +242,36 @@ export const Element: React.FC<ElementProps> = React.memo(
         onTouchStart={handleTouchStart}
         data-element-id={element.id}
         style={{
-          position: isDragging || !isParentFlow ? "absolute" : "relative",
+          position:
+            !element.parentId || element.layout.position === "absolute"
+              ? "absolute"
+              : "relative",
           left:
-            isDragging || !isParentFlow ? `${element.props.x}px` : undefined,
-          top: isDragging || !isParentFlow ? `${element.props.y}px` : undefined,
+            !element.parentId || element.layout.position === "absolute"
+              ? `${element.layout.x ?? 0}px`
+              : undefined,
+          top:
+            !element.parentId || element.layout.position === "absolute"
+              ? `${element.layout.y ?? 0}px`
+              : undefined,
           width:
-            element.props.width === "auto"
+            element.layout.width === "auto"
               ? "auto"
-              : `${element.props.width}px`,
+              : element.layout.width === "100%"
+                ? "100%"
+                : `${element.layout.width}px`,
           height:
-            element.props.height === "auto"
+            element.layout.height === "auto"
               ? "auto"
-              : `${element.props.height}px`,
+              : element.layout.height === "100%"
+                ? "100%"
+                : `${element.layout.height}px`,
           zIndex: isDragging
             ? Z.DRAG_GHOST
-            : (element.props.zIndex ?? Z.ELEMENT),
+            : (element.layout.zIndex ?? Z.ELEMENT),
           flexShrink: 0,
-          alignSelf: element.props.alignSelf,
-          transform: element.props.transform,
+          alignSelf: element.layout.alignSelf,
+          transform: element.style.transform,
           cursor: element.locked ? "not-allowed" : "default",
           touchAction: "none",
         }}
