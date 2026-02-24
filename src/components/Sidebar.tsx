@@ -1,6 +1,6 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useViewport } from "@/hooks/useViewport";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -21,7 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   title,
   icon,
 }) => {
-  const isMobile = useIsMobile();
+  const viewport = useViewport();
+  const isMobile = viewport === "mobile";
 
   return (
     <div

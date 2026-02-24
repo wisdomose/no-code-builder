@@ -113,7 +113,6 @@ interface InteractionState {
 }
 
 interface ArtboardState {
-    width: number
     height: number
     background: string
 }
@@ -142,6 +141,7 @@ interface EditorState {
 
     // Artboard (Physical Page)
     artboard: ArtboardState
+    deviceMode: 'desktop' | 'tablet' | 'mobile'
 
     // Layout (Chrome)
     layout: LayoutState
@@ -184,6 +184,7 @@ interface EditorState {
     setCamera: (camera: Partial<CameraState>) => void
     resetCamera: (containerWidth?: number, containerHeight?: number) => void
     setArtboard: (artboard: Partial<ArtboardState>) => void
+    setDeviceMode: (mode: 'desktop' | 'tablet' | 'mobile') => void
 
     setLeftWidth: (width: number) => void
     setRightWidth: (width: number) => void
@@ -201,6 +202,12 @@ interface EditorState {
 
 const MAX_HISTORY = 100
 
+export const DEVICE_WIDTHS = {
+    desktop: 1440,
+    tablet: 768,
+    mobile: 390
+} as const;
+
 const INITIAL_ELEMENTS: Record<string, EditorElement> = {}
 
 export const useEditorStore = create<EditorState>()(
@@ -211,7 +218,8 @@ export const useEditorStore = create<EditorState>()(
             selectedId: null,
 
             camera: { scale: 1, x: 0, y: 0 },
-            artboard: { width: 1440, height: 900, background: '#f9fafb' },
+            artboard: { height: 900, background: '#f9fafb' },
+            deviceMode: 'desktop',
             layout: { leftWidth: 240, rightWidth: 360, isLeftCollapsed: false, isRightCollapsed: false },
             history: { past: [], future: [] },
             theme: 'dark',
@@ -555,18 +563,19 @@ export const useEditorStore = create<EditorState>()(
                 set((state) => ({ camera: { ...state.camera, ...camera } })),
 
             resetCamera: (containerWidth, containerHeight) => {
-                const { artboard } = get()
+                const { artboard, deviceMode } = get()
+                const artboardWidth = DEVICE_WIDTHS[deviceMode]
                 if (containerWidth && containerHeight) {
                     const padding = 100
                     const fitScale = Math.min(
                         1,
-                        (containerWidth - padding) / artboard.width,
+                        (containerWidth - padding) / artboardWidth,
                         (containerHeight - padding) / artboard.height
                     )
                     set({
                         camera: {
                             scale: fitScale,
-                            x: (containerWidth - artboard.width * fitScale) / 2,
+                            x: (containerWidth - artboardWidth * fitScale) / 2,
                             y: (containerHeight - artboard.height * fitScale) / 2,
                         }
                     })
@@ -579,6 +588,8 @@ export const useEditorStore = create<EditorState>()(
                 get().saveHistory()
                 set((state) => ({ artboard: { ...state.artboard, ...artboard } }))
             },
+
+            setDeviceMode: (mode) => set({ deviceMode: mode }),
 
             setLeftWidth: (width) =>
                 set((state) => ({

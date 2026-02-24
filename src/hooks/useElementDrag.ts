@@ -1,4 +1,4 @@
-import { useEditorStore, getElementRef } from "@/lib/useEditorStore";
+import { useEditorStore, getElementRef, DEVICE_WIDTHS } from "@/lib/useEditorStore";
 import type { EditorElement as IEditorElement } from "@/lib/useEditorStore";
 import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
 import { collectDescendants } from "@/lib/elementUtils";
@@ -72,7 +72,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
 
             if (!isParentFlow) {
                 const state = useEditorStore.getState();
-                const { artboard, elements: allEls } = state;
+                const { artboard, deviceMode, elements: allEls } = state;
                 const artboardH = computeArtboardHeight(allEls, artboard.height);
 
                 const rawX = startPropX + dx;
@@ -88,7 +88,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
 
                 const snap = getSnapResult(
                     { x: rawX, y: rawY, w: elW, h: elH },
-                    artboard.width,
+                    DEVICE_WIDTHS[deviceMode],
                     artboardH,
                     peers,
                 );

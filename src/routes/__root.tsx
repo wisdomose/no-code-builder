@@ -22,7 +22,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { ToolBar } from "@/components/ToolBar";
 import { ResizeHandle } from "@/components/ResizeHandle";
 import { useEditorStore } from "@/lib/useEditorStore";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useViewport } from "@/hooks/useViewport";
 import { Canvas } from "@/components/Canvas";
 import { Artboard } from "@/components/Artboard";
 import { LayerTree } from "@/components/LayerTree";
@@ -32,7 +32,9 @@ import { StatusBar } from "@/components/StatusBar";
 import { SectionLibrary } from "@/components/SectionLibrary";
 
 function RootDocument() {
-  const isMobile = useIsMobile();
+  const viewport = useViewport();
+  const isMobile = viewport === "mobile";
+  const isTablet = viewport === "tablet";
   const {
     layout,
     setLeftWidth,
@@ -78,7 +80,7 @@ function RootDocument() {
   }, [hasHydrated]);
 
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile || isTablet) {
       if (!layout.isLeftCollapsed) {
         useEditorStore.setState((s) => ({
           layout: { ...s.layout, isLeftCollapsed: true },
@@ -90,7 +92,7 @@ function RootDocument() {
         }));
       }
     }
-  }, [isMobile, hasHydrated]);
+  }, [isMobile, isTablet, hasHydrated]);
 
   const { leftWidth, rightWidth, isLeftCollapsed, isRightCollapsed } = layout;
 
@@ -157,20 +159,39 @@ function RootDocument() {
 
             {/* Main Editor Grid Layout */}
             <div
-              className={`flex-1 overflow-hidden relative ${isMobile ? "flex" : "grid"}`}
+              className={`flex-1 overflow-hidden relative ${isMobile ? "flex" : isTablet ? "block" : "grid"}`}
               style={{
-                gridTemplateColumns: isMobile
-                  ? undefined
-                  : `
+                gridTemplateColumns:
+                  isMobile || isTablet
+                    ? undefined
+                    : `
                   ${isLeftCollapsed ? "48px" : `${leftWidth}px`}
                   1fr
                   ${isRightCollapsed ? "48px" : `${rightWidth}px`}
                 `,
               }}
             >
+              {/* Overlay Backdrop for Mobile/Tablet */}
+              {(isMobile || isTablet) &&
+                (!isLeftCollapsed || !isRightCollapsed) && (
+                  <div
+                    className="absolute inset-0 bg-background/40 backdrop-blur-[2px] z-30 animate-in fade-in duration-200"
+                    onClick={() => {
+                      if (!isLeftCollapsed) toggleLeftCollapse();
+                      if (!isRightCollapsed) toggleRightCollapse();
+                    }}
+                  />
+                )}
+
               {/* Left Sidebar - Navigator */}
               <div
-                className={`relative group h-full z-40 ${isMobile && isLeftCollapsed ? "hidden" : ""} ${isMobile ? "absolute left-0 w-full top-0 bottom-0 shadow-2xl" : ""}`}
+                className={`relative group h-full z-40 
+                  ${isMobile && isLeftCollapsed ? "hidden" : ""} 
+                  ${isMobile ? "absolute left-0 w-full top-0 bottom-0 shadow-2xl" : ""}
+                  ${isTablet ? "absolute left-0 top-0 bottom-0 shadow-xl transition-transform duration-300 ease-in-out" : ""}
+                  ${isTablet && isLeftCollapsed ? "-translate-x-full" : "translate-x-0"}
+                `}
+                style={isTablet ? { width: "260px" } : undefined}
               >
                 <Sidebar
                   position="left"
@@ -219,7 +240,7 @@ function RootDocument() {
                     </div>
                   )}
                 </Sidebar>
-                {!isLeftCollapsed && (
+                {!isLeftCollapsed && !isTablet && (
                   <div className="absolute top-0 -right-0.5 bottom-0 z-20">
                     <ResizeHandle
                       position="right"
@@ -260,9 +281,15 @@ function RootDocument() {
 
               {/* Right Sidebar - Design */}
               <div
-                className={`relative group h-full z-40 ${isMobile && isRightCollapsed ? "hidden" : ""} ${isMobile ? "absolute right-0 w-full top-0 bottom-0 shadow-2xl" : ""}`}
+                className={`relative group h-full z-40 
+                  ${isMobile && isRightCollapsed ? "hidden" : ""} 
+                  ${isMobile ? "absolute right-0 w-full top-0 bottom-0 shadow-2xl" : ""}
+                  ${isTablet ? "absolute right-0 top-0 bottom-0 shadow-xl transition-transform duration-300 ease-in-out" : ""}
+                  ${isTablet && isRightCollapsed ? "translate-x-full" : "translate-x-0"}
+                `}
+                style={isTablet ? { width: "260px" } : undefined}
               >
-                {!isRightCollapsed && (
+                {!isRightCollapsed && !isTablet && (
                   <div className="absolute top-0 -left-0.5 bottom-0 z-20">
                     <ResizeHandle
                       position="left"

@@ -1,5 +1,5 @@
 import React from "react";
-import { useEditorStore } from "@/lib/useEditorStore";
+import { useEditorStore, DEVICE_WIDTHS } from "@/lib/useEditorStore";
 import type { EditorElement, ElementLayout } from "@/lib/useEditorStore";
 import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
 import { Z } from "@/lib/layers";
@@ -119,7 +119,7 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
       let dy = (clientY - startY) / currentCamera.scale;
 
       // ── Snap during resize ─────────────────────────────────────────────────
-      const { artboard, elements: allEls } = state;
+      const { artboard, deviceMode, elements: allEls } = state;
       const artboardH = computeArtboardHeight(allEls, artboard.height);
 
       let propX = startEX;
@@ -142,7 +142,7 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
       );
       const snap = getSnapResult(
         { x: propX, y: propY, w: propW, h: propH },
-        artboard.width,
+        DEVICE_WIDTHS[deviceMode],
         artboardH,
         peers,
       );
