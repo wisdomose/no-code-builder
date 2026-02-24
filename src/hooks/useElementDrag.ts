@@ -19,8 +19,8 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
         const startX = clientX;
         const startY = clientY;
 
-        let startPropX = element.props.x;
-        let startPropY = element.props.y;
+        let startPropX = element.layout.x ?? 0;
+        let startPropY = element.layout.y ?? 0;
 
         const elementNode = getElementRef(element.id);
         if (elementNode && elementNode.parentElement) {
@@ -42,8 +42,8 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
 
         const startPositions = affectedElements.map((el) => ({
             id: el.id,
-            x: el.id === element.id ? startPropX : el.props.x,
-            y: el.id === element.id ? startPropY : el.props.y,
+            x: el.id === element.id ? startPropX : (el.layout.x ?? 0),
+            y: el.id === element.id ? startPropY : (el.layout.y ?? 0),
         }));
 
         let isDragStarted = false;
@@ -78,9 +78,9 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
                 const rawX = startPropX + dx;
                 const rawY = startPropY + dy;
                 const elW =
-                    typeof element.props.width === "number" ? element.props.width : 0;
+                    typeof element.layout.width === "number" ? element.layout.width : 0;
                 const elH =
-                    typeof element.props.height === "number" ? element.props.height : 0;
+                    typeof element.layout.height === "number" ? element.layout.height : 0;
 
                 const peers = Object.values(allEls).filter(
                     (el) => el.parentId === element.parentId && !affectedIds.has(el.id),
@@ -100,7 +100,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
 
             const updates = startPositions.map((pos) => ({
                 id: pos.id,
-                props: {
+                layout: {
                     x: Math.round(pos.x + dx),
                     y: Math.round(pos.y + dy),
                 },
@@ -129,7 +129,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
                     ) {
                         store.setHoveredElementId(targetId);
 
-                        if (potentialParent.props.display === "flex") {
+                        if (potentialParent.layout.display === "flex") {
                             const latestElements = useEditorStore.getState().elements;
                             const siblings = Object.values(latestElements)
                                 .filter(
@@ -142,7 +142,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
                                 const siblingNode = getElementRef(siblings[i].id);
                                 if (siblingNode) {
                                     const rect = siblingNode.getBoundingClientRect();
-                                    const isRow = potentialParent.props.flexDirection === "row";
+                                    const isRow = potentialParent.layout.flexDirection === "row";
                                     const center = isRow
                                         ? rect.left + rect.width / 2
                                         : rect.top + rect.height / 2;
@@ -195,7 +195,7 @@ export function useElementDrag(element: IEditorElement, isParentFlow: boolean) {
 
             if (finalHoveredId) {
                 const parentEl = latestElements[finalHoveredId];
-                const isFlex = parentEl?.props.display === "flex";
+                const isFlex = parentEl?.layout.display === "flex";
                 if (isFlex) {
                     const index = finalState.insertIndex ?? 0;
                     store.reorderElement(element.id, finalHoveredId, index);

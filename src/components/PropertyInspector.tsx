@@ -40,8 +40,16 @@ export const PropertyInspector: React.FC = () => {
     );
   }
 
-  const handlePropChange = (key: string, value: unknown) => {
+  const handleLayoutChange = (key: string, value: unknown) => {
     updateElement(element.id, { [key]: value });
+  };
+
+  const handleStyleChange = (key: string, value: unknown) => {
+    updateElement(element.id, undefined, { [key]: value });
+  };
+
+  const handleContentChange = (content: string) => {
+    updateElement(element.id, undefined, undefined, content);
   };
 
   const toggle = (title: string) =>
@@ -95,7 +103,7 @@ export const PropertyInspector: React.FC = () => {
         element={element}
         isExpanded={expandedSections.includes("Size & Position")}
         onToggle={() => toggle("Size & Position")}
-        onPropChange={handlePropChange}
+        onLayoutChange={handleLayoutChange}
       />
 
       {isText && (
@@ -103,7 +111,7 @@ export const PropertyInspector: React.FC = () => {
           element={element}
           isExpanded={expandedSections.includes("Typography")}
           onToggle={() => toggle("Typography")}
-          onPropChange={handlePropChange}
+          onStyleChange={handleStyleChange}
         />
       )}
 
@@ -112,7 +120,7 @@ export const PropertyInspector: React.FC = () => {
           element={element}
           isExpanded={expandedSections.includes("Layout")}
           onToggle={() => toggle("Layout")}
-          onPropChange={handlePropChange}
+          onLayoutChange={handleLayoutChange}
         />
       )}
 
@@ -121,7 +129,7 @@ export const PropertyInspector: React.FC = () => {
           element={element}
           isExpanded={expandedSections.includes("Image")}
           onToggle={() => toggle("Image")}
-          onPropChange={handlePropChange}
+          onContentChange={handleContentChange}
         />
       )}
 
@@ -129,14 +137,15 @@ export const PropertyInspector: React.FC = () => {
         element={element}
         isExpanded={expandedSections.includes("Fill & Stroke")}
         onToggle={() => toggle("Fill & Stroke")}
-        onPropChange={handlePropChange}
+        onStyleChange={handleStyleChange}
+        onLayoutChange={handleLayoutChange}
       />
 
       <EffectsPanel
         element={element}
         isExpanded={expandedSections.includes("Effects")}
         onToggle={() => toggle("Effects")}
-        onPropChange={handlePropChange}
+        onStyleChange={handleStyleChange}
       />
     </div>
   );

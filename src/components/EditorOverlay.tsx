@@ -29,32 +29,37 @@ function computeRectFromStore(
   element: EditorElement,
   elements: Record<string, EditorElement>,
 ): Rect | null {
-  // Walk up the tree: if any parent is a flow container, bail out.
+  // Trust store coordinates ONLY for absolute elements.
+  // Flow elements (flex/grid/standard block) must be measured via DOM
+  // because their visual position depends on siblings and parent layout.
+  if (element.layout.position !== "absolute") return null;
+
+  // Additional safety: if any parent is a flow container, bail out.
   let cur = element;
   while (cur.parentId) {
     const parent = elements[cur.parentId];
     if (!parent) break;
-    if (parent.props.display === "flex" || parent.props.display === "grid") {
-      return null; // visual position is browser-computed
+    if (parent.layout.display === "flex" || parent.layout.display === "grid") {
+      return null;
     }
     cur = parent;
   }
 
   const w =
-    typeof element.props.width === "number" ? element.props.width : null;
+    typeof element.layout.width === "number" ? element.layout.width : null;
   const h =
-    typeof element.props.height === "number" ? element.props.height : null;
+    typeof element.layout.height === "number" ? element.layout.height : null;
   if (w === null || h === null) return null;
 
   // Sum all ancestor absolute positions
-  let x = element.props.x;
-  let y = element.props.y;
+  let x = element.layout.x ?? 0;
+  let y = element.layout.y ?? 0;
   cur = element;
   while (cur.parentId) {
     const parent = elements[cur.parentId];
     if (!parent) break;
-    x += parent.props.x;
-    y += parent.props.y;
+    x += parent.layout.x ?? 0;
+    y += parent.layout.y ?? 0;
     cur = parent;
   }
 
@@ -104,8 +109,8 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
     const startY = clientY;
     const startW = rect.w;
     const startH = rect.h;
-    const startEX = element.props.x;
-    const startEY = element.props.y;
+    const startEX = element.layout.x ?? 0;
+    const startEY = element.layout.y ?? 0;
 
     const handleMove = (clientX: number, clientY: number) => {
       const state = useEditorStore.getState();
@@ -146,7 +151,7 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
       state.setSnapLines(snap.lines);
       // ──────────────────────────────────────────────────────────────────────
 
-      const updates: Partial<EditorElement["props"]> = {};
+      const updates: any = {};
       if (dir.includes("e"))
         updates.width = Math.max(10, Math.round(startW + dx));
       if (dir.includes("s"))

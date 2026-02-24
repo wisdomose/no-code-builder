@@ -65,14 +65,17 @@ function RootDocument() {
   };
 
   useEffect(() => {
-    // Center on mount
-    handleResetCamera();
+    if (hasHydrated) {
+      // Center on mount (when hydrated and DOM is available)
+      // Added a tiny delay to ensure paint has happened if on mobile
+      setTimeout(handleResetCamera, 10);
+    }
 
     // Also center on window resize to keep it robust
     const handleResize = () => handleResetCamera();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [hasHydrated]);
 
   useEffect(() => {
     if (isMobile) {
@@ -109,7 +112,7 @@ function RootDocument() {
             rel="stylesheet"
           />
         </head>
-        <body className="antialiased h-screen w-screen flex flex-col items-center justify-center bg-background text-text-main">
+        <body className="antialiased h-dvh w-screen flex flex-col items-center justify-center bg-background text-text-main">
           <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
             <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20">
               <Layers size={32} />
@@ -145,7 +148,7 @@ function RootDocument() {
         />
       </head>
       <body className="antialiased">
-        <div className="flex flex-col h-screen overflow-hidden bg-background text-text-main">
+        <div className="flex flex-col h-dvh overflow-hidden bg-background text-text-main">
           <Header />
 
           <div className="flex flex-col-reverse md:flex-row flex-1 overflow-hidden relative">
@@ -217,7 +220,7 @@ function RootDocument() {
                   )}
                 </Sidebar>
                 {!isLeftCollapsed && (
-                  <div className="absolute top-0 -right-0.5 bottom-0 z-[20]">
+                  <div className="absolute top-0 -right-0.5 bottom-0 z-20">
                     <ResizeHandle
                       position="right"
                       onResize={(delta) => {
@@ -241,10 +244,10 @@ function RootDocument() {
 
                 {/* Floating On-Canvas Zoom Indicator */}
                 <div className="absolute bottom-6 right-6 flex items-center bg-[#1e2229] border border-[#2d313a] rounded-lg p-0.5 shadow-2xl z-50 transition-all hover:scale-105">
-                  <div className="px-3 py-1.5 text-[11px] font-bold text-white tracking-widest min-w-[50px] text-center">
+                  <div className="px-3 py-1.5 text-[11px] font-bold text-white tracking-widest min-w-12.5 text-center">
                     {Math.round(camera.scale * 100)}%
                   </div>
-                  <div className="w-[1px] h-4 bg-[#2d313a] mx-0.5" />
+                  <div className="w-px h-4 bg-[#2d313a] mx-0.5" />
                   <button
                     onClick={handleResetCamera}
                     className="p-1.5 hover:bg-[#2d313a] rounded-md text-gray-400 hover:text-white transition-all"
@@ -260,7 +263,7 @@ function RootDocument() {
                 className={`relative group h-full z-40 ${isMobile && isRightCollapsed ? "hidden" : ""} ${isMobile ? "absolute right-0 w-full top-0 bottom-0 shadow-2xl" : ""}`}
               >
                 {!isRightCollapsed && (
-                  <div className="absolute top-0 -left-0.5 bottom-0 z-[20]">
+                  <div className="absolute top-0 -left-0.5 bottom-0 z-20">
                     <ResizeHandle
                       position="left"
                       onResize={(delta) => {

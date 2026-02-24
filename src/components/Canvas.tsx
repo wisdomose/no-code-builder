@@ -21,7 +21,7 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
 
       if (e.ctrlKey || e.metaKey) {
         const scaleChange = -e.deltaY > 0 ? 1.1 : 0.9;
-        const newScale = Math.min(4, Math.max(0.25, cam.scale * scaleChange));
+        const newScale = Math.min(4, Math.max(0.05, cam.scale * scaleChange));
 
         if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
@@ -42,7 +42,11 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
   );
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+    const mode = useEditorStore.getState().interactionState.mode;
+    if (
+      e.button === 1 ||
+      (e.button === 0 && (e.shiftKey || mode === "panning"))
+    ) {
       isPanning.current = true;
       document.body.style.cursor = "grabbing";
     } else if (e.target === containerRef.current) {
@@ -105,7 +109,7 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
           scaleChange = dist / touchState.current.lastPinchDist;
         }
 
-        const newScale = Math.min(4, Math.max(0.25, cam.scale * scaleChange));
+        const newScale = Math.min(4, Math.max(0.05, cam.scale * scaleChange));
 
         if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
@@ -187,12 +191,12 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
           const step = e.shiftKey ? 10 : 1;
           const delta =
             e.key === "ArrowUp"
-              ? { y: el.props.y - step }
+              ? { y: (el.layout.y ?? 0) - step }
               : e.key === "ArrowDown"
-                ? { y: el.props.y + step }
+                ? { y: (el.layout.y ?? 0) + step }
                 : e.key === "ArrowLeft"
-                  ? { x: el.props.x - step }
-                  : { x: el.props.x + step };
+                  ? { x: (el.layout.x ?? 0) - step }
+                  : { x: (el.layout.x ?? 0) + step };
           state.updateElement(selectedId, delta);
           break;
         }

@@ -64,7 +64,7 @@ export const SectionLibrary: React.FC = () => {
   const insertAt = (
     factory: (x: number, y: number) => ReturnType<typeof createHeroSection>,
   ) => {
-    addElements(factory(300, 200));
+    addElements(factory(300, 200) as any);
   };
 
   const CATEGORIES: CategoryDef[] = useMemo(
@@ -313,9 +313,6 @@ const PresetCard: React.FC<{
           {description}
         </p>
       </div>
-      <span className="opacity-0 group-hover/preset:opacity-100 transition-opacity bg-primary text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
-        + Add
-      </span>
     </div>
   </div>
 );

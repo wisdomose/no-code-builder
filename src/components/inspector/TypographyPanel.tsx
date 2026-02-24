@@ -41,12 +41,12 @@ export function TypographyPanel({
   element,
   isExpanded,
   onToggle,
-  onPropChange,
+  onStyleChange,
 }: {
   element: EditorElement;
   isExpanded: boolean;
   onToggle: () => void;
-  onPropChange: (key: string, value: any) => void;
+  onStyleChange: (key: string, value: any) => void;
 }) {
   return (
     <Section
@@ -59,24 +59,24 @@ export function TypographyPanel({
         {/* Font Family */}
         <CustomSelect
           label="Font"
-          value={element.props.fontFamily || "Inter"}
+          value={element.style.fontFamily || "Inter"}
           options={FONT_OPTIONS}
-          onChange={(v) => onPropChange("fontFamily", v)}
+          onChange={(v) => onStyleChange("fontFamily", v)}
         />
 
         {/* Size + Weight */}
         <div className="grid grid-cols-2 gap-3">
           <Control
             label="Size"
-            value={element.props.fontSize || 16}
-            onChange={(v) => onPropChange("fontSize", v)}
+            value={element.style.fontSize || 16}
+            onChange={(v) => onStyleChange("fontSize", v)}
             min={1}
           />
           <CustomSelect
             label="Weight"
-            value={String(element.props.fontWeight || 400)}
+            value={String(element.style.fontWeight || 400)}
             options={WEIGHT_OPTIONS}
-            onChange={(v) => onPropChange("fontWeight", v)}
+            onChange={(v) => onStyleChange("fontWeight", v)}
           />
         </div>
 
@@ -85,11 +85,11 @@ export function TypographyPanel({
           <Control
             label="Line H"
             value={
-              typeof element.props.lineHeight === "number"
-                ? element.props.lineHeight
+              typeof element.style.lineHeight === "number"
+                ? element.style.lineHeight
                 : 1.5
             }
-            onChange={(v) => onPropChange("lineHeight", v)}
+            onChange={(v) => onStyleChange("lineHeight", v)}
             min={0}
             step={0.1}
           />
@@ -100,8 +100,8 @@ export function TypographyPanel({
             <div className="bg-background/50 border border-border/50 rounded-lg focus-within:border-primary transition-all hover:bg-background/80 overflow-hidden">
               <input
                 type="text"
-                value={element.props.letterSpacing || "0px"}
-                onChange={(e) => onPropChange("letterSpacing", e.target.value)}
+                value={element.style.letterSpacing || "0px"}
+                onChange={(e) => onStyleChange("letterSpacing", e.target.value)}
                 className="w-full bg-transparent px-2 py-1.5 text-[11px] font-mono font-bold text-text-main focus:ring-0 outline-none"
                 placeholder="0px"
               />
@@ -113,31 +113,31 @@ export function TypographyPanel({
         <div className="flex items-center justify-between p-0.5 bg-background border border-border rounded-lg">
           <IconButton
             icon={<Bold size={14} />}
-            active={Number(element.props.fontWeight) >= 700}
+            active={Number(element.style.fontWeight) >= 700}
             onClick={() =>
-              onPropChange(
+              onStyleChange(
                 "fontWeight",
-                Number(element.props.fontWeight) >= 700 ? "400" : "700",
+                Number(element.style.fontWeight) >= 700 ? "400" : "700",
               )
             }
           />
           <IconButton
             icon={<Italic size={14} />}
-            active={element.props.fontStyle === "italic"}
+            active={element.style.fontStyle === "italic"}
             onClick={() =>
-              onPropChange(
+              onStyleChange(
                 "fontStyle",
-                element.props.fontStyle === "italic" ? "normal" : "italic",
+                element.style.fontStyle === "italic" ? "normal" : "italic",
               )
             }
           />
           <IconButton
             icon={<Underline size={14} />}
-            active={element.props.textDecoration === "underline"}
+            active={element.style.textDecoration === "underline"}
             onClick={() =>
-              onPropChange(
+              onStyleChange(
                 "textDecoration",
-                element.props.textDecoration === "underline"
+                element.style.textDecoration === "underline"
                   ? "none"
                   : "underline",
               )
@@ -145,11 +145,11 @@ export function TypographyPanel({
           />
           <IconButton
             icon={<Strikethrough size={14} />}
-            active={element.props.textDecoration === "line-through"}
+            active={element.style.textDecoration === "line-through"}
             onClick={() =>
-              onPropChange(
+              onStyleChange(
                 "textDecoration",
-                element.props.textDecoration === "line-through"
+                element.style.textDecoration === "line-through"
                   ? "none"
                   : "line-through",
               )
@@ -162,24 +162,24 @@ export function TypographyPanel({
           <IconButton
             icon={<AlignLeft size={14} />}
             active={
-              element.props.textAlign === "left" || !element.props.textAlign
+              element.style.textAlign === "left" || !element.style.textAlign
             }
-            onClick={() => onPropChange("textAlign", "left")}
+            onClick={() => onStyleChange("textAlign", "left")}
           />
           <IconButton
             icon={<AlignCenter size={14} />}
-            active={element.props.textAlign === "center"}
-            onClick={() => onPropChange("textAlign", "center")}
+            active={element.style.textAlign === "center"}
+            onClick={() => onStyleChange("textAlign", "center")}
           />
           <IconButton
             icon={<AlignRight size={14} />}
-            active={element.props.textAlign === "right"}
-            onClick={() => onPropChange("textAlign", "right")}
+            active={element.style.textAlign === "right"}
+            onClick={() => onStyleChange("textAlign", "right")}
           />
           <IconButton
             icon={<AlignJustify size={14} />}
-            active={element.props.textAlign === "justify"}
-            onClick={() => onPropChange("textAlign", "justify")}
+            active={element.style.textAlign === "justify"}
+            onClick={() => onStyleChange("textAlign", "justify")}
           />
         </div>
 
@@ -193,9 +193,9 @@ export function TypographyPanel({
               (t) => (
                 <button
                   key={t}
-                  onClick={() => onPropChange("textTransform", t)}
+                  onClick={() => onStyleChange("textTransform", t)}
                   className={`flex-1 py-1.5 rounded text-[9px] font-bold uppercase transition-all ${
-                    (element.props.textTransform || "none") === t
+                    (element.style.textTransform || "none") === t
                       ? "bg-surface text-primary shadow-sm"
                       : "text-text-muted hover:text-text-main"
                   }`}
