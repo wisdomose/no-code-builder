@@ -126,8 +126,8 @@ interface LayoutState {
 }
 
 interface HistoryState {
-    past: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
-    future: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
+    past: { elements: Record<string, EditorElement>; rootElements: string[]; artboard: ArtboardState }[]
+    future: { elements: Record<string, EditorElement>; rootElements: string[]; artboard: ArtboardState }[]
 }
 
 interface EditorState {
@@ -234,8 +234,8 @@ export const useEditorStore = create<EditorState>()(
             setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
             saveHistory: () => {
-                const { elements, artboard, history } = get()
-                const snapshot = structuredClone({ elements, artboard })
+                const { elements, rootElements, artboard, history } = get()
+                const snapshot = structuredClone({ elements, rootElements, artboard })
                 const newPast = [...history.past, snapshot]
                 if (newPast.length > MAX_HISTORY) newPast.shift()
                 set({ history: { past: newPast, future: [] } })
@@ -512,10 +512,15 @@ export const useEditorStore = create<EditorState>()(
 
                 const previous = past[past.length - 1]
                 const newPast = past.slice(0, -1)
-                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
+                const current = structuredClone({
+                    elements: get().elements,
+                    rootElements: get().rootElements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: previous.elements,
+                    rootElements: previous.rootElements,
                     artboard: previous.artboard,
                     history: {
                         past: newPast,
@@ -529,10 +534,15 @@ export const useEditorStore = create<EditorState>()(
                 if (!future.length) return
 
                 const [next, ...newFuture] = future
-                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
+                const current = structuredClone({
+                    elements: get().elements,
+                    rootElements: get().rootElements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: next.elements,
+                    rootElements: next.rootElements,
                     artboard: next.artboard,
                     history: {
                         past: [...past, current].slice(-MAX_HISTORY),
