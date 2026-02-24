@@ -18,6 +18,14 @@ interface Rect {
   h: number;
 }
 
+interface DistanceGuideData {
+  orientation: "horizontal" | "vertical";
+  value: number;
+  lineStart: { x: number; y: number };
+  lineEnd: { x: number; y: number };
+  labelPos: { x: number; y: number };
+}
+
 // ─── Position helpers ─────────────────────────────────────────────────────────
 
 /**
@@ -306,6 +314,100 @@ const HoverRing: React.FC<{ rect: Rect }> = ({ rect }) => (
   />
 );
 
+const DistanceGuide: React.FC<{ guide: DistanceGuideData }> = ({ guide }) => {
+  const isHorizontal = guide.orientation === "horizontal";
+  return (
+    <>
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: Math.min(guide.lineStart.x, guide.lineEnd.x),
+          top: Math.min(guide.lineStart.y, guide.lineEnd.y),
+          width: isHorizontal ? Math.abs(guide.lineEnd.x - guide.lineStart.x) : 1,
+          height: isHorizontal ? 1 : Math.abs(guide.lineEnd.y - guide.lineStart.y),
+          background: "#a855f7",
+          zIndex: Z.SELECT_RING + 2,
+        }}
+      />
+      <div
+        className="absolute pointer-events-none text-[10px] leading-none px-1 py-0.5 rounded bg-[#a855f7] text-white"
+        style={{
+          left: guide.labelPos.x,
+          top: guide.labelPos.y,
+          transform: "translate(-50%, -50%)",
+          zIndex: Z.SELECT_RING + 3,
+        }}
+      >
+        {guide.value}px
+      </div>
+    </>
+  );
+};
+
+function getDistanceGuides(a: Rect, b: Rect): DistanceGuideData[] {
+  const guides: DistanceGuideData[] = [];
+
+  const yOverlapStart = Math.max(a.y, b.y);
+  const yOverlapEnd = Math.min(a.y + a.h, b.y + b.h);
+  if (yOverlapEnd > yOverlapStart) {
+    const y = (yOverlapStart + yOverlapEnd) / 2;
+    if (a.x + a.w <= b.x) {
+      const dist = Math.round(b.x - (a.x + a.w));
+      if (dist > 0) {
+        guides.push({
+          orientation: "horizontal",
+          value: dist,
+          lineStart: { x: a.x + a.w, y },
+          lineEnd: { x: b.x, y },
+          labelPos: { x: (a.x + a.w + b.x) / 2, y: y - 10 },
+        });
+      }
+    } else if (b.x + b.w <= a.x) {
+      const dist = Math.round(a.x - (b.x + b.w));
+      if (dist > 0) {
+        guides.push({
+          orientation: "horizontal",
+          value: dist,
+          lineStart: { x: b.x + b.w, y },
+          lineEnd: { x: a.x, y },
+          labelPos: { x: (b.x + b.w + a.x) / 2, y: y - 10 },
+        });
+      }
+    }
+  }
+
+  const xOverlapStart = Math.max(a.x, b.x);
+  const xOverlapEnd = Math.min(a.x + a.w, b.x + b.w);
+  if (xOverlapEnd > xOverlapStart) {
+    const x = (xOverlapStart + xOverlapEnd) / 2;
+    if (a.y + a.h <= b.y) {
+      const dist = Math.round(b.y - (a.y + a.h));
+      if (dist > 0) {
+        guides.push({
+          orientation: "vertical",
+          value: dist,
+          lineStart: { x, y: a.y + a.h },
+          lineEnd: { x, y: b.y },
+          labelPos: { x: x + 14, y: (a.y + a.h + b.y) / 2 },
+        });
+      }
+    } else if (b.y + b.h <= a.y) {
+      const dist = Math.round(a.y - (b.y + b.h));
+      if (dist > 0) {
+        guides.push({
+          orientation: "vertical",
+          value: dist,
+          lineStart: { x, y: b.y + b.h },
+          lineEnd: { x, y: a.y },
+          labelPos: { x: x + 14, y: (b.y + b.h + a.y) / 2 },
+        });
+      }
+    }
+  }
+
+  return guides;
+}
+
 // ─── Main overlay ─────────────────────────────────────────────────────────────
 
 export const EditorOverlay: React.FC<EditorOverlayProps> = ({
@@ -321,6 +423,11 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
     null,
   );
   const [domHoveredRect, setDomHoveredRect] = React.useState<Rect | null>(null);
+  const [domAltHoveredRect, setDomAltHoveredRect] = React.useState<Rect | null>(
+    null,
+  );
+  const [isAltPressed, setIsAltPressed] = React.useState(false);
+  const [altHoveredId, setAltHoveredId] = React.useState<string | null>(null);
 
   const selectedElement = selectedId ? elements[selectedId] : null;
   const hoveredElement = hoveredId ? elements[hoveredId] : null;
@@ -332,6 +439,53 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
   const hoveredRect = hoveredElement
     ? (computeRectFromStore(hoveredElement, elements) ?? domHoveredRect)
     : null;
+  const altHoveredElement = altHoveredId ? elements[altHoveredId] : null;
+  const altHoveredRect = altHoveredElement
+    ? (computeRectFromStore(altHoveredElement, elements) ?? domAltHoveredRect)
+    : null;
+  const distanceGuides =
+    isAltPressed && selectedRect && altHoveredRect
+      ? getDistanceGuides(selectedRect, altHoveredRect)
+      : [];
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Alt") setIsAltPressed(true);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Alt") {
+        setIsAltPressed(false);
+        setAltHoveredId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!selectedId) {
+      setAltHoveredId(null);
+      return;
+    }
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isAltPressed) {
+        setAltHoveredId(null);
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      const host = target?.closest("[data-element-id]") as HTMLElement | null;
+      const nextId = host?.dataset.elementId ?? null;
+      setAltHoveredId(nextId && nextId !== selectedId ? nextId : null);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    return () => window.removeEventListener("mousemove", onMouseMove);
+  }, [isAltPressed, selectedId]);
 
   // For flex/grid children only: measure via DOM after browser paint.
   React.useEffect(() => {
@@ -343,8 +497,11 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
       computeRectFromStore(selectedElement, elements) === null;
     const needsDomHovered =
       hoveredElement && computeRectFromStore(hoveredElement, elements) === null;
+    const needsDomAltHovered =
+      altHoveredElement &&
+      computeRectFromStore(altHoveredElement, elements) === null;
 
-    if (!needsDomSelected && !needsDomHovered) return;
+    if (!needsDomSelected && !needsDomHovered && !needsDomAltHovered) return;
 
     const rafId = requestAnimationFrame(() => {
       if (needsDomSelected) {
@@ -353,11 +510,14 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
       if (needsDomHovered) {
         setDomHoveredRect(measureFromDOM(hoveredElement!.id, ab));
       }
+      if (needsDomAltHovered) {
+        setDomAltHoveredRect(measureFromDOM(altHoveredElement!.id, ab));
+      }
     });
 
     return () => cancelAnimationFrame(rafId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, hoveredId, elements, scale]);
+  }, [selectedId, hoveredId, altHoveredId, elements, scale]);
 
   // Clear DOM rects when the selected/hovered element changes to an abs element.
   React.useEffect(() => {
@@ -373,8 +533,14 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
     ) {
       setDomHoveredRect(null);
     }
+    if (
+      !altHoveredElement ||
+      computeRectFromStore(altHoveredElement, elements) !== null
+    ) {
+      setDomAltHoveredRect(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, hoveredId]);
+  }, [selectedId, hoveredId, altHoveredId]);
 
   return (
     <div
@@ -384,6 +550,12 @@ export const EditorOverlay: React.FC<EditorOverlayProps> = ({
       {hoveredRect && hoveredId !== selectedId && (
         <HoverRing rect={hoveredRect} />
       )}
+      {altHoveredRect && altHoveredId !== selectedId && (
+        <HoverRing rect={altHoveredRect} />
+      )}
+      {distanceGuides.map((guide, idx) => (
+        <DistanceGuide key={`${guide.orientation}-${idx}`} guide={guide} />
+      ))}
       {selectedRect && selectedElement && (
         <SelectionChrome
           rect={selectedRect}
