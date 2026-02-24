@@ -33,11 +33,8 @@ export const Element: React.FC<ElementProps> = React.memo(
     );
     const setEditingId = useEditorStore((s) => s.setEditingId);
     const updateElement = useEditorStore((s) => s.updateElement);
-
-    // Phase 2: visibility
-    if (element.visible === false) return null;
-
     const elements = useEditorStore((s) => s.elements);
+
     const directChildren = React.useMemo(
       () =>
         (element.children || [])
@@ -45,6 +42,9 @@ export const Element: React.FC<ElementProps> = React.memo(
           .filter(Boolean) as IEditorElement[],
       [elements, element.children],
     );
+
+    // Phase 2: visibility
+    if (element.visible === false) return null;
 
     const parent = element.parentId ? elements[element.parentId] : null;
     const isParentFlow =

@@ -36,6 +36,7 @@ function LayerItem({
   toggleExpand,
   onDragStart,
   onDragOver,
+  onDragEnd,
   onDrop,
   dragOverId,
   dragPosition,
@@ -50,6 +51,7 @@ function LayerItem({
   toggleExpand: (id: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver: (e: React.DragEvent, id: string) => void;
+  onDragEnd: () => void;
   onDrop: (e: React.DragEvent, id: string) => void;
   dragOverId: string | null;
   dragPosition: "before" | "inside" | "after" | null;
@@ -71,9 +73,7 @@ function LayerItem({
       <div
         draggable={true}
         onDragStart={(e) => onDragStart(e, el.id)}
-        onDragEnd={() => {
-          onDragOver(null as any, ""); // clear state
-        }}
+        onDragEnd={onDragEnd}
         onDragOver={(e) => onDragOver(e, el.id)}
         onDrop={(e) => {
           e.stopPropagation();
@@ -182,6 +182,7 @@ function LayerItem({
               toggleExpand={toggleExpand}
               onDragStart={onDragStart}
               onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
               onDrop={onDrop}
               dragOverId={dragOverId}
               dragPosition={dragPosition}
@@ -226,16 +227,14 @@ export const LayerTree: React.FC = () => {
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e: React.DragEvent, id?: string) => {
-    if (!e) {
-      // Manual clear from onDragEnd
-      setDragOverId(null);
-      setDragPosition(null);
-      draggedIdRef.current = null;
-      setIsDragging(false);
-      return;
-    }
+  const clearDragState = React.useCallback(() => {
+    setDragOverId(null);
+    setDragPosition(null);
+    draggedIdRef.current = null;
+    setIsDragging(false);
+  }, []);
 
+  const handleDragOver = (e: React.DragEvent, id?: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -300,10 +299,7 @@ export const LayerTree: React.FC = () => {
     const finalTargetId = targetId || dragOverId;
     const finalDragPosition = dragPosition;
 
-    setDragOverId(null);
-    setDragPosition(null);
-    draggedIdRef.current = null;
-    setIsDragging(false);
+    clearDragState();
 
     if (!draggedId || draggedId === finalTargetId) return;
 
@@ -371,6 +367,7 @@ export const LayerTree: React.FC = () => {
           toggleExpand={toggleExpand}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
+          onDragEnd={clearDragState}
           onDrop={handleDrop}
           dragOverId={dragOverId}
           dragPosition={dragPosition}

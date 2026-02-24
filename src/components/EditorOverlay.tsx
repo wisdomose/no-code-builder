@@ -1,6 +1,6 @@
 import React from "react";
 import { useEditorStore } from "@/lib/useEditorStore";
-import type { EditorElement } from "@/lib/useEditorStore";
+import type { EditorElement, ElementLayout } from "@/lib/useEditorStore";
 import { getSnapResult, computeArtboardHeight } from "@/lib/useSnap";
 import { Z } from "@/lib/layers";
 
@@ -151,7 +151,7 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
       state.setSnapLines(snap.lines);
       // ──────────────────────────────────────────────────────────────────────
 
-      const updates: any = {};
+      const updates: Partial<ElementLayout> = {};
       if (dir.includes("e"))
         updates.width = Math.max(10, Math.round(startW + dx));
       if (dir.includes("s"))
@@ -187,7 +187,7 @@ function useResizeHandles(element: EditorElement | null, rect: Rect | null) {
 
     window.addEventListener("mousemove", handleResize);
     window.addEventListener("mouseup", stopResize);
-    window.addEventListener("touchmove", handleTouchResize, { passive: true });
+    window.addEventListener("touchmove", handleTouchResize, { passive: false });
     window.addEventListener("touchend", stopResize);
     window.addEventListener("touchcancel", stopResize);
   };
