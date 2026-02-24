@@ -42,7 +42,11 @@ export const Canvas: React.FC<CanvasProps> = ({ children }) => {
   );
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
+    const mode = useEditorStore.getState().interactionState.mode;
+    if (
+      e.button === 1 ||
+      (e.button === 0 && (e.shiftKey || mode === "panning"))
+    ) {
       isPanning.current = true;
       document.body.style.cursor = "grabbing";
     } else if (e.target === containerRef.current) {

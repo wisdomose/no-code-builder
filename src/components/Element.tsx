@@ -40,10 +40,10 @@ export const Element: React.FC<ElementProps> = React.memo(
     const elements = useEditorStore((s) => s.elements);
     const directChildren = React.useMemo(
       () =>
-        Object.values(elements)
-          .filter((el) => el.parentId === element.id)
-          .sort((a, b) => (a.index ?? 0) - (b.index ?? 0)),
-      [elements, element.id],
+        (element.children || [])
+          .map((id) => elements[id])
+          .filter(Boolean) as IEditorElement[],
+      [elements, element.children],
     );
 
     const parent = element.parentId ? elements[element.parentId] : null;
@@ -243,15 +243,21 @@ export const Element: React.FC<ElementProps> = React.memo(
         data-element-id={element.id}
         style={{
           position:
-            !element.parentId || element.layout.position === "absolute"
+            isDragging ||
+            !element.parentId ||
+            element.layout.position === "absolute"
               ? "absolute"
               : "relative",
           left:
-            !element.parentId || element.layout.position === "absolute"
+            isDragging ||
+            !element.parentId ||
+            element.layout.position === "absolute"
               ? `${element.layout.x ?? 0}px`
               : undefined,
           top:
-            !element.parentId || element.layout.position === "absolute"
+            isDragging ||
+            !element.parentId ||
+            element.layout.position === "absolute"
               ? `${element.layout.y ?? 0}px`
               : undefined,
           width:

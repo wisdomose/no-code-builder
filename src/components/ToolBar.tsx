@@ -7,7 +7,6 @@ import {
   Type,
   Image as ImageIcon,
   Hand,
-  MessageSquare,
   Settings,
   HelpCircle,
   Plus,
@@ -59,11 +58,22 @@ export const ToolBar: React.FC = () => {
     }
 
     addElement({
-      id: id,
+      id,
       type,
       parentId: undefined,
-      layout: { x: 100, y: 100, width: 200, height: 100 },
-      style: { background: "#ffffff", color: "#000000" },
+      layout: {
+        position: "absolute",
+        x,
+        y,
+        width: props.width,
+        height: props.height,
+      },
+      style: {
+        background: props.background || "#ffffff",
+        color: props.color || "#000000",
+        borderRadius: props.borderRadius ?? 0,
+        boxShadow: "none",
+      },
       content: type === "text" ? "New Text" : undefined,
     });
   };
@@ -108,8 +118,12 @@ export const ToolBar: React.FC = () => {
           title="Media (M)"
           onClick={() => handleAddElement("image")}
         />
-        <ToolButton icon={<Hand size={18} />} title="Hand (H)" />
-        <ToolButton icon={<MessageSquare size={18} />} title="Comments (C)" />
+        <ToolButton
+          icon={<Hand size={18} />}
+          active={interactionState.mode === "panning"}
+          title="Hand (H)"
+          onClick={() => setInteractionMode("panning")}
+        />
       </div>
 
       {/* Bottom Tools */}

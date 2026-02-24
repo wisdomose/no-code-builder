@@ -17,14 +17,20 @@ export function getAbsolutePosition(
     element: EditorElement,
     elements: Record<string, EditorElement>
 ): { x: number; y: number } {
-    let x = (element.layout?.position === 'absolute' ? element.layout.x : 0) ?? 0
-    let y = (element.layout?.position === 'absolute' ? element.layout.y : 0) ?? 0
+    // For the target element, always trust x/y (especially during dragging/reparenting)
+    let x = element.layout.x ?? 0
+    let y = element.layout.y ?? 0
     let current = element
+
     while (current.parentId) {
         const parent = elements[current.parentId]
         if (!parent) break
-        x += (parent.layout?.position === 'absolute' ? parent.layout.x : 0) ?? 0
-        y += (parent.layout?.position === 'absolute' ? parent.layout.y : 0) ?? 0
+
+        // Root elements or absolute elements provide a coordinate base
+        if (!parent.parentId || parent.layout.position === 'absolute') {
+            x += parent.layout.x ?? 0
+            y += parent.layout.y ?? 0
+        }
         current = parent
     }
     return { x, y }
@@ -188,7 +194,7 @@ interface EditorState {
     // Sidebar Tabbing
     leftSidebarTab: 'layers' | 'assets' | 'sections'
     setLeftSidebarTab: (tab: 'layers' | 'assets' | 'sections') => void
-    reorderElement: (id: string, newParentId: string, newIndex: number) => void
+    reorderElement: (id: string, newParentId: string | undefined, newIndex: number) => void
     setInsertIndex: (index: number | null) => void
     setHasHydrated: (state: boolean) => void
 }
@@ -237,38 +243,68 @@ export const useEditorStore = create<EditorState>()(
 
             addElement: (element) => {
                 get().saveHistory()
-                set((state) => ({
-                    elements: { ...state.elements, [element.id]: element },
-                    rootElements: element.parentId ? state.rootElements : [...state.rootElements, element.id]
-                }))
+                set((state) => {
+                    const nextElements = { ...state.elements }
+                    const newEl = { children: [], ...element } as EditorElement
+                    nextElements[newEl.id] = newEl
+
+                    if (newEl.parentId) {
+                        const parent = nextElements[newEl.parentId]
+                        if (parent) {
+                            nextElements[newEl.parentId] = {
+                                ...parent,
+                                children: [...(parent.children || []), newEl.id]
+                            }
+                        }
+                    }
+
+                    return {
+                        elements: nextElements,
+                        rootElements: newEl.parentId ? state.rootElements : [...state.rootElements, newEl.id]
+                    }
+                })
             },
 
-            addElements: (elements) => {
+            addElements: (elementsToAdd) => {
                 get().saveHistory()
                 set((state) => {
                     const next = { ...state.elements }
                     const nextRoot = [...state.rootElements]
-                    // Track how many children each parent already has so we can
-                    // auto-assign sequential indices to elements that omit index.
                     const parentChildCount = new Map<string, number>()
 
-                    for (const el of elements) {
+                    // 1. First Pass: Add all elements and ensure children initialized
+                    for (const el of elementsToAdd) {
                         let index = el.index
                         if (index === undefined && el.parentId) {
                             if (!parentChildCount.has(el.parentId)) {
-                                const existing = Object.values(next).filter(
-                                    (e) => e.parentId === el.parentId,
-                                ).length
+                                const existing = Object.values(next).filter(e => e.parentId === el.parentId).length
                                 parentChildCount.set(el.parentId, existing)
                             }
                             index = parentChildCount.get(el.parentId)!
                             parentChildCount.set(el.parentId, index + 1)
                         }
-                        next[el.id] = { ...el, index } as EditorElement
+                        next[el.id] = { children: [], ...el, index } as EditorElement
                         if (!el.parentId && !nextRoot.includes(el.id)) {
                             nextRoot.push(el.id)
                         }
                     }
+
+                    // 2. Second Pass: Synchronize parent.children arrays
+                    for (const el of elementsToAdd) {
+                        if (el.parentId) {
+                            const parent = next[el.parentId]
+                            if (parent) {
+                                const children = parent.children || []
+                                if (!children.includes(el.id)) {
+                                    next[el.parentId] = {
+                                        ...parent,
+                                        children: [...children, el.id]
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     return { elements: next, rootElements: nextRoot }
                 })
             },
@@ -277,17 +313,38 @@ export const useEditorStore = create<EditorState>()(
                 set((state) => {
                     const element = state.elements[id]
                     if (!element) return state
-                    return {
-                        elements: {
-                            ...state.elements,
-                            [id]: {
-                                ...element,
-                                layout: layout ? { ...element.layout, ...layout } : element.layout,
-                                style: style ? { ...element.style, ...style } : element.style,
-                                content: content !== undefined ? content : element.content
-                            }
-                        }
+
+                    const nextElements = { ...state.elements }
+                    const newLayout = layout ? { ...element.layout, ...layout } : element.layout
+
+                    // Update the element itself
+                    nextElements[id] = {
+                        ...element,
+                        layout: newLayout,
+                        style: style ? { ...element.style, ...style } : element.style,
+                        content: content !== undefined ? content : element.content
                     }
+
+                    // If display mode changed, propagate 'position' mode to all children
+                    if (layout?.display && layout.display !== element.layout.display) {
+                        const isLayoutParent = layout.display === 'flex' || layout.display === 'grid';
+                        const childrenIds = element.children || [];
+
+                        childrenIds.forEach(cid => {
+                            const child = nextElements[cid];
+                            if (child) {
+                                nextElements[cid] = {
+                                    ...child,
+                                    layout: {
+                                        ...child.layout,
+                                        position: isLayoutParent ? 'flow' : 'absolute'
+                                    }
+                                };
+                            }
+                        });
+                    }
+
+                    return { elements: nextElements }
                 })
             },
 
@@ -322,20 +379,38 @@ export const useEditorStore = create<EditorState>()(
             removeElement: (id) => {
                 get().saveHistory()
                 set((state) => {
-                    // Single-pass BFS to collect all descendant IDs.
-                    const allEls = state.elements
+                    const elToRemove = state.elements[id]
+                    if (!elToRemove) return state
+
+                    // 1. Collect all descendants
                     const toDelete = new Set<string>()
                     const queue = [id]
                     while (queue.length) {
                         const current = queue.pop()!
                         toDelete.add(current)
-                        for (const el of Object.values(allEls)) {
+                        for (const el of Object.values(state.elements)) {
                             if (el.parentId === current) queue.push(el.id)
                         }
                     }
+
+                    const nextElements = { ...state.elements }
+
+                    // 2. Remove from parent's children array
+                    if (elToRemove.parentId) {
+                        const parent = nextElements[elToRemove.parentId]
+                        if (parent) {
+                            nextElements[elToRemove.parentId] = {
+                                ...parent,
+                                children: (parent.children || []).filter(cid => cid !== id)
+                            }
+                        }
+                    }
+
+                    // 3. Delete everything collected
                     const remaining = Object.fromEntries(
-                        Object.entries(allEls).filter(([k]) => !toDelete.has(k))
+                        Object.entries(nextElements).filter(([k]) => !toDelete.has(k))
                     )
+
                     return {
                         elements: remaining,
                         rootElements: state.rootElements.filter((rid) => !toDelete.has(rid)),
@@ -353,6 +428,10 @@ export const useEditorStore = create<EditorState>()(
 
                 get().saveHistory()
 
+                // Calculate current absolute position (best effort)
+                // If the element is currently flow, x/y might be 0 in store but offset in DOM.
+                // However, reparentElement is usually called after the store has updated x/y during drag
+                // OR from the Layer Tree where we don't necessarily care about preserving pixel coords perfectly.
                 const { x: absX, y: absY } = getAbsolutePosition(element, state.elements)
 
                 let newX = absX
@@ -368,26 +447,60 @@ export const useEditorStore = create<EditorState>()(
                 }
 
                 set((s) => {
-                    const wasRoot = !element.parentId
-                    const becomesRoot = !newParentId
-                    let nextRootElements = s.rootElements
-                    if (wasRoot && !becomesRoot) {
-                        nextRootElements = s.rootElements.filter((rid) => rid !== id)
-                    } else if (!wasRoot && becomesRoot && !s.rootElements.includes(id)) {
-                        nextRootElements = [...s.rootElements, id]
-                    }
-                    return {
-                        elements: {
-                            ...s.elements,
-                            [id]: {
-                                ...element,
-                                parentId: newParentId,
-                                layout: { ...element.layout, x: newX, y: newY }
+                    const el = s.elements[id]
+                    if (!el) return s
+                    const nextElements = { ...s.elements }
+
+                    // 1. Remove from old parent's children array
+                    if (el.parentId) {
+                        const oldParent = nextElements[el.parentId]
+                        if (oldParent) {
+                            nextElements[el.parentId] = {
+                                ...oldParent,
+                                children: (oldParent.children || []).filter(cid => cid !== id)
                             }
-                        },
-                        rootElements: nextRootElements,
+                        }
                     }
-                })
+
+                    // 2. Insert into new parent's children array
+                    if (newParentId) {
+                        const newParent = nextElements[newParentId]
+                        if (newParent) {
+                            nextElements[newParentId] = {
+                                ...newParent,
+                                children: [...(newParent.children || []), id]
+                            }
+                        }
+                    }
+
+                    // 3. Update rootElements if moving to/from root
+                    let nextRootElements = [...s.rootElements]
+                    if (!el.parentId && newParentId) {
+                        nextRootElements = nextRootElements.filter(rid => rid !== id)
+                    } else if (el.parentId && !newParentId) {
+                        nextRootElements = [...nextRootElements, id]
+                    }
+
+                    // 4. Update the element itself
+                    const isLayoutParent = newParentId ? nextElements[newParentId]?.layout.display === 'flex' || nextElements[newParentId]?.layout.display === 'grid' : false;
+
+                    nextElements[id] = {
+                        ...el,
+                        parentId: newParentId,
+                        layout: {
+                            ...el.layout,
+                            x: newX,
+                            y: newY,
+                            position: isLayoutParent ? 'flow' : 'absolute'
+                        },
+                        index: newParentId ? (nextElements[newParentId]?.children?.length || 1) - 1 : nextRootElements.length - 1
+                    }
+
+                    return {
+                        elements: nextElements,
+                        rootElements: nextRootElements,
+                    };
+                });
             },
 
             setHoveredElementId: (id) => set({ hoveredElementId: id }),
@@ -483,42 +596,102 @@ export const useEditorStore = create<EditorState>()(
                 get().saveHistory()
 
                 set((state) => {
-                    const element = state.elements[id]
-                    if (!element) return state
+                    const el = state.elements[id]
+                    if (!el) return state
 
-                    const oldParentId = element.parentId
+                    const oldParentId = el.parentId
+                    const isReparenting = oldParentId !== newParentId
 
-                    // Siblings in the destination parent (excluding the moved element)
-                    const siblings = Object.values(state.elements)
-                        .filter((el) => el.parentId === newParentId && el.id !== id)
-                        .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+                    const nextElements = { ...state.elements }
 
-                    siblings.splice(newIndex, 0, element)
+                    // 1. Remove from old parent
+                    if (oldParentId) {
+                        const oldParent = nextElements[oldParentId]
+                        if (oldParent) {
+                            nextElements[oldParentId] = {
+                                ...oldParent,
+                                children: (oldParent.children || []).filter((cid) => cid !== id)
+                            }
+                        }
+                    }
 
-                    const updates: Record<string, Partial<EditorElement>> = {}
-                    siblings.forEach((el, idx) => {
-                        if (el.index !== idx || el.parentId !== newParentId || el.id === id) {
-                            updates[el.id] = { index: idx, parentId: newParentId }
+                    // 2. Insert into new parent
+                    if (newParentId) {
+                        const newParent = nextElements[newParentId]
+                        if (newParent) {
+                            const newChildren = [...(newParent.children || [])]
+                            newChildren.splice(newIndex, 0, id)
+                            nextElements[newParentId] = {
+                                ...newParent,
+                                children: newChildren
+                            }
+                        }
+
+                        const isLayoutParent = newParent?.layout.display === 'flex' || newParent?.layout.display === 'grid';
+
+                        // Update element's parent pointer and mode
+                        nextElements[id] = {
+                            ...el,
+                            parentId: newParentId,
+                            index: newIndex,
+                            layout: {
+                                ...el.layout,
+                                position: isLayoutParent ? 'flow' : 'absolute'
+                            }
+                        }
+                    } else {
+                        // Moving to root
+                        nextElements[id] = {
+                            ...el,
+                            parentId: undefined,
+                            index: newIndex,
+                            layout: {
+                                ...el.layout,
+                                position: 'absolute'
+                            }
+                        }
+                    }
+
+                    // 3. Update rootElements if needed
+                    let nextRootElements = [...state.rootElements]
+                    if (isReparenting) {
+                        if (!oldParentId) {
+                            nextRootElements = nextRootElements.filter((rid) => rid !== id)
+                        }
+                        if (!newParentId) {
+                            nextRootElements.splice(newIndex, 0, id)
+                        }
+                    } else if (!newParentId) {
+                        // Reordering within root
+                        nextRootElements = nextRootElements.filter((rid) => rid !== id)
+                        nextRootElements.splice(newIndex, 0, id)
+                    }
+
+                    // 4. Clean up indices for siblings in affected parents
+                    const touchedParents = new Set<string | undefined>([oldParentId, newParentId])
+                    touchedParents.forEach((pid) => {
+                        if (pid) {
+                            const parent = nextElements[pid]
+                            if (parent && parent.children) {
+                                parent.children.forEach((cid, idx) => {
+                                    if (nextElements[cid]) {
+                                        nextElements[cid] = { ...nextElements[cid], index: idx }
+                                    }
+                                })
+                            }
+                        } else {
+                            nextRootElements.forEach((rid, idx) => {
+                                if (nextElements[rid]) {
+                                    nextElements[rid] = { ...nextElements[rid], index: idx }
+                                }
+                            })
                         }
                     })
 
-                    // Re-index old parent's children if moved cross-parent
-                    if (oldParentId && oldParentId !== newParentId) {
-                        Object.values(state.elements)
-                            .filter((el) => el.parentId === oldParentId && el.id !== id)
-                            .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
-                            .forEach((el, idx) => {
-                                if (el.index !== idx) {
-                                    updates[el.id] = { ...updates[el.id], index: idx }
-                                }
-                            })
+                    return {
+                        elements: nextElements,
+                        rootElements: nextRootElements
                     }
-
-                    const next = { ...state.elements }
-                    for (const [elId, changes] of Object.entries(updates)) {
-                        next[elId] = { ...next[elId], ...changes }
-                    }
-                    return { elements: next }
                 })
             }
         }),
