@@ -6,8 +6,8 @@ import {
   Redo2,
   Sun,
   Moon,
-  Share2,
-  Eye,
+  Download,
+  Upload,
   Menu,
   Settings2,
   Monitor,
@@ -17,6 +17,16 @@ import {
 } from "lucide-react";
 import { useEditorStore, DEVICE_WIDTHS } from "@/lib/useEditorStore";
 import { useViewport } from "@/hooks/useViewport";
+import {
+  applyImportedProject,
+  downloadProjectHtml,
+  importProjectHtmlFile,
+} from "@/lib/projectHtml";
+
+type BannerState = {
+  tone: "success" | "error";
+  message: string;
+} | null;
 
 export const Header: React.FC = () => {
   const theme = useEditorStore((s) => s.theme);
@@ -32,11 +42,62 @@ export const Header: React.FC = () => {
   const isMobile = viewport === "mobile";
 
   const [showDeviceMenu, setShowDeviceMenu] = React.useState(false);
+  const [banner, setBanner] = React.useState<BannerState>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!banner) return;
+
+    const timeout = window.setTimeout(() => setBanner(null), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [banner]);
+
+  const handleExportHtml = () => {
+    try {
+      downloadProjectHtml(useEditorStore.getState());
+      setBanner({ tone: "success", message: "HTML exported." });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "HTML export failed.";
+      setBanner({ tone: "error", message });
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    try {
+      const project = await importProjectHtmlFile(file);
+      applyImportedProject(project);
+      setBanner({ tone: "success", message: "HTML imported." });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "HTML import failed.";
+      setBanner({ tone: "error", message });
+    }
+  };
 
   return (
     <header
       className={`h-14 border-b border-border flex items-center ${isMobile ? "px-2" : "px-4"} shrink-0 justify-between bg-surface z-100 select-none`}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".html,text/html"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div className={`flex items-center ${isMobile ? "gap-2" : "gap-4"}`}>
         {isMobile && (
           <button
@@ -160,14 +221,21 @@ export const Header: React.FC = () => {
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors hidden md:block">
-          <Share2 size={18} />
+        <button
+          onClick={handleImportClick}
+          className="hidden md:flex items-center gap-2 border border-border bg-background/30 hover:bg-background/50 text-text-main px-4 py-2 text-xs md:text-sm rounded-lg font-bold transition-all"
+          title="Import an HTML file"
+        >
+          <Upload size={16} />
+          Import HTML
         </button>
-        <button className="p-2 hover:bg-background rounded-full text-text-muted hover:text-text-main transition-colors hidden md:block">
-          <Eye size={18} />
-        </button>
-        <button className="hidden md:block bg-primary hover:bg-primary/90 text-white px-4 py-2 text-xs md:text-sm md:px-5 rounded-lg font-bold transition-all shadow-md shadow-primary/20">
-          Publish
+        <button
+          onClick={handleExportHtml}
+          className="hidden md:flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 text-xs md:text-sm md:px-5 rounded-lg font-bold transition-all shadow-md shadow-primary/20"
+          title="Download the current project as HTML"
+        >
+          <Download size={16} />
+          Export HTML
         </button>
         {isMobile && (
           <button
@@ -217,6 +285,30 @@ export const Header: React.FC = () => {
           <div className="text-[10px] font-mono font-bold text-text-main">
             {DEVICE_WIDTHS[deviceMode]}PX
           </div>
+          <div className="w-px h-4 bg-border" />
+          <button
+            onClick={handleImportClick}
+            className="text-[10px] font-bold uppercase tracking-wide text-text-main"
+          >
+            Import
+          </button>
+          <button
+            onClick={handleExportHtml}
+            className="text-[10px] font-bold uppercase tracking-wide text-primary"
+          >
+            Export
+          </button>
+        </div>
+      )}
+      {banner && (
+        <div
+          className={`absolute top-16 right-4 max-w-80 rounded-md border px-3 py-2 text-[11px] font-medium shadow-lg ${
+            banner.tone === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              : "border-rose-500/30 bg-rose-500/10 text-rose-300"
+          }`}
+        >
+          {banner.message}
         </div>
       )}
     </header>
