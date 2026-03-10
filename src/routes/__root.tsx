@@ -8,6 +8,8 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { Toaster } from "sonner";
 import { useEditorStore } from "@/lib/useEditorStore";
+import { NotFound } from "@/components/NotFound";
+import { ErrorComponent } from "@/components/Error";
 
 import appCss from "../styles.css?url";
 
@@ -21,6 +23,8 @@ export const Route = createRootRoute({
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: NotFound,
+  errorComponent: ErrorComponent,
 });
 
 function RootDocument() {
