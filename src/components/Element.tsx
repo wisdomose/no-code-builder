@@ -187,7 +187,8 @@ export const Element: React.FC<ElementProps> = React.memo(
                 border:
                   !style.background &&
                   !style.borderWidth &&
-                  !style.backgroundImage
+                  !style.backgroundImage &&
+                  directChildren.length === 0
                     ? "1px dashed #ccc"
                     : undefined,
                 display: layout.display || "flex",
