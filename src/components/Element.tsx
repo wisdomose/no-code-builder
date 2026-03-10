@@ -33,11 +33,8 @@ export const Element: React.FC<ElementProps> = React.memo(
     );
     const setEditingId = useEditorStore((s) => s.setEditingId);
     const updateElement = useEditorStore((s) => s.updateElement);
-
-    // Phase 2: visibility
-    if (element.visible === false) return null;
-
     const elements = useEditorStore((s) => s.elements);
+
     const directChildren = React.useMemo(
       () =>
         (element.children || [])
@@ -45,6 +42,9 @@ export const Element: React.FC<ElementProps> = React.memo(
           .filter(Boolean) as IEditorElement[],
       [elements, element.children],
     );
+
+    // Phase 2: visibility
+    if (element.visible === false) return null;
 
     const parent = element.parentId ? elements[element.parentId] : null;
     const isParentFlow =
@@ -187,7 +187,8 @@ export const Element: React.FC<ElementProps> = React.memo(
                 border:
                   !style.background &&
                   !style.borderWidth &&
-                  !style.backgroundImage
+                  !style.backgroundImage &&
+                  directChildren.length === 0
                     ? "1px dashed #ccc"
                     : undefined,
                 display: layout.display || "flex",
@@ -212,9 +213,9 @@ export const Element: React.FC<ElementProps> = React.memo(
                   {isHoveredAsParent && insertIndex === idx && (
                     <div
                       className={`
-                         ${layout.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
-                         bg-[#007aff] rounded-full z-50 pointer-events-none transition-all
-                     `}
+                        ${layout.flexDirection === "row" ? "w-1 h-full -mx-0.5" : "h-1 w-full -my-0.5"}
+                        bg-[#007aff] rounded-full z-50 pointer-events-none transition-all
+                    `}
                     />
                   )}
                   <Element element={el} />
@@ -223,7 +224,7 @@ export const Element: React.FC<ElementProps> = React.memo(
               {isHoveredAsParent && insertIndex === directChildren.length && (
                 <div
                   className={`
-                      ${layout.flexDirection === "row" ? "w-[4px] h-full mx-[-2px]" : "h-[4px] w-full my-[-2px]"}
+                      ${layout.flexDirection === "row" ? "w-1 h-full -mx-0.5" : "h-1 w-full -my-0.5"}
                       bg-[#007aff] rounded-full z-50 pointer-events-none transition-all
                   `}
                 />

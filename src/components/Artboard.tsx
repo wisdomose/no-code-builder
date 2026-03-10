@@ -1,11 +1,18 @@
 import React, { useRef } from "react";
-import { useEditorStore, type EditorElement } from "@/lib/useEditorStore";
+import {
+  useEditorStore,
+  type EditorElement,
+  DEVICE_WIDTHS,
+} from "@/lib/useEditorStore";
 import { Element as EditorElementComponent } from "./Element";
 import { SnapOverlay } from "./SnapOverlay";
 import { EditorOverlay } from "./EditorOverlay";
 
 export const Artboard: React.FC = () => {
   const artboard = useEditorStore((s) => s.artboard);
+  const deviceMode = useEditorStore((s) => s.deviceMode);
+  const artboardWidth = DEVICE_WIDTHS[deviceMode];
+
   const setArtboard = useEditorStore((s) => s.setArtboard);
   const setSelectedId = useEditorStore((s) => s.setSelectedId);
   const rootElementsIds = useEditorStore((s) => s.rootElements);
@@ -87,12 +94,12 @@ export const Artboard: React.FC = () => {
         onMouseDown={handleArtboardMouseDown}
         onTouchStart={handleArtboardTouchStart}
         style={{
-          width: `${artboard.width}px`,
+          width: `${artboardWidth}px`,
           height: `${artboard.height}px`,
           backgroundColor: artboard.background,
           isolation: "isolate",
         }}
-        className="relative shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.1)] outline outline-1 outline-black/5"
+        className="relative shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.1)] outline-1 outline-black/5"
       >
         {rootElements.map((el) => (
           <EditorElementComponent key={el.id} element={el} />
@@ -109,7 +116,7 @@ export const Artboard: React.FC = () => {
       <div
         onMouseDown={handleHeightDragStart}
         onTouchStart={handleHeightTouchStart}
-        style={{ width: `${artboard.width}px` }}
+        style={{ width: `${artboardWidth}px` }}
         className="relative h-3 flex items-center justify-center cursor-ns-resize group mt-0"
         title="Drag to resize artboard height"
       >
@@ -122,7 +129,7 @@ export const Artboard: React.FC = () => {
         className="absolute left-1/2 -translate-x-1/2 text-[10px] text-black/30 select-none pointer-events-none"
         style={{ top: `${artboard.height + 12}px` }}
       >
-        {artboard.width} × {artboard.height}
+        {artboardWidth} × {artboard.height}
       </div>
     </div>
   );

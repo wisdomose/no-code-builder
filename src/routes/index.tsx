@@ -1,118 +1,304 @@
-import { createFileRoute } from '@tanstack/react-router'
-import {
-  Zap,
-  Server,
-  Route as RouteIcon,
-  Shield,
-  Waves,
-  Sparkles,
-} from 'lucide-react'
+import { useRef, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Layers, Settings2, Maximize, Box, Database } from "lucide-react";
+import { Sidebar } from "@/components/Sidebar";
+import { ToolBar } from "@/components/ToolBar";
+import { ResizeHandle } from "@/components/ResizeHandle";
+import { useEditorStore } from "@/lib/useEditorStore";
+import { useViewport } from "@/hooks/useViewport";
+import { Canvas } from "@/components/Canvas";
+import { Artboard } from "@/components/Artboard";
+import { LayerTree } from "@/components/LayerTree";
+import { PropertyInspector } from "@/components/PropertyInspector";
+import { Header } from "@/components/Header";
+import { StatusBar } from "@/components/StatusBar";
+import { SectionLibrary } from "@/components/SectionLibrary";
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute("/")({
+  component: EditorRoute,
+});
 
-function App() {
-  const features = [
-    {
-      icon: <Zap className="w-12 h-12 text-cyan-400" />,
-      title: 'Powerful Server Functions',
-      description:
-        'Write server-side code that seamlessly integrates with your client components. Type-safe, secure, and simple.',
-    },
-    {
-      icon: <Server className="w-12 h-12 text-cyan-400" />,
-      title: 'Flexible Server Side Rendering',
-      description:
-        'Full-document SSR, streaming, and progressive enhancement out of the box. Control exactly what renders where.',
-    },
-    {
-      icon: <RouteIcon className="w-12 h-12 text-cyan-400" />,
-      title: 'API Routes',
-      description:
-        'Build type-safe API endpoints alongside your application. No separate backend needed.',
-    },
-    {
-      icon: <Shield className="w-12 h-12 text-cyan-400" />,
-      title: 'Strongly Typed Everything',
-      description:
-        'End-to-end type safety from server to client. Catch errors before they reach production.',
-    },
-    {
-      icon: <Waves className="w-12 h-12 text-cyan-400" />,
-      title: 'Full Streaming Support',
-      description:
-        'Stream data from server to client progressively. Perfect for AI applications and real-time updates.',
-    },
-    {
-      icon: <Sparkles className="w-12 h-12 text-cyan-400" />,
-      title: 'Next Generation Ready',
-      description:
-        'Built from the ground up for modern web applications. Deploy anywhere JavaScript runs.',
-    },
-  ]
+function EditorRoute() {
+  const viewport = useViewport();
+  const isMobile = viewport === "mobile";
+  const isTablet = viewport === "tablet";
+  const {
+    layout,
+    setLeftWidth,
+    setRightWidth,
+    toggleLeftCollapse,
+    toggleRightCollapse,
+    camera,
+    resetCamera,
+    leftSidebarTab,
+    setLeftSidebarTab,
+    hasHydrated,
+  } = useEditorStore();
+
+  const mainRef = useRef<HTMLElement>(null);
+
+  const handleResetCamera = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (mainRef.current) {
+      // Small delay to ensure layout has computed
+      requestAnimationFrame(() => {
+        if (mainRef.current) {
+          const { clientWidth, clientHeight } = mainRef.current;
+          resetCamera(clientWidth, clientHeight);
+        }
+      });
+    } else {
+      resetCamera();
+    }
+  };
+
+  useEffect(() => {
+    if (hasHydrated) {
+      // Center on mount (when hydrated and DOM is available)
+      // Added a tiny delay to ensure paint has happened if on mobile
+      setTimeout(handleResetCamera, 10);
+    }
+
+    // Also center on window resize to keep it robust
+    const handleResize = () => handleResetCamera();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [hasHydrated]);
+
+  useEffect(() => {
+    if (isMobile || isTablet) {
+      if (!layout.isLeftCollapsed) {
+        useEditorStore.setState((s) => ({
+          layout: { ...s.layout, isLeftCollapsed: true },
+        }));
+      }
+      if (!layout.isRightCollapsed) {
+        useEditorStore.setState((s) => ({
+          layout: { ...s.layout, isRightCollapsed: true },
+        }));
+      }
+    }
+  }, [isMobile, isTablet, hasHydrated]);
+
+  const { leftWidth, rightWidth, isLeftCollapsed, isRightCollapsed } = layout;
+
+  if (!hasHydrated) {
+    return (
+      <div className="antialiased h-dvh w-screen flex flex-col items-center justify-center bg-background text-text-main">
+        <div className="flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20">
+            <Layers size={32} />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold tracking-tight text-text-main">
+              Codex
+            </span>
+            <span className="text-xs text-text-muted font-medium mt-1 tracking-widest uppercase">
+              Loading Workspace
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <section className="relative py-20 px-6 text-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
-        <div className="relative max-w-5xl mx-auto">
-          <div className="flex items-center justify-center gap-6 mb-6">
-            <img
-              src="/tanstack-circle-logo.png"
-              alt="TanStack Logo"
-              className="w-24 h-24 md:w-32 md:h-32"
-            />
-            <h1 className="text-6xl md:text-7xl font-black text-white [letter-spacing:-0.08em]">
-              <span className="text-gray-300">TANSTACK</span>{' '}
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                START
-              </span>
-            </h1>
-          </div>
-          <p className="text-2xl md:text-3xl text-gray-300 mb-4 font-light">
-            The framework for next generation AI applications
-          </p>
-          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
-            Full-stack framework powered by TanStack Router for React and Solid.
-            Build modern applications with server functions, streaming, and type
-            safety.
-          </p>
-          <div className="flex flex-col items-center gap-4">
-            <a
-              href="https://tanstack.com/start"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
-            >
-              Documentation
-            </a>
-            <p className="text-gray-400 text-sm mt-2">
-              Begin your TanStack Start journey by editing{' '}
-              <code className="px-2 py-1 bg-slate-700 rounded text-cyan-400">
-                /src/routes/index.tsx
-              </code>
-            </p>
-          </div>
-        </div>
-      </section>
+    <div className="flex flex-col h-dvh overflow-hidden bg-background text-text-main">
+      <Header />
 
-      <section className="py-16 px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
+      <div className="flex flex-col-reverse md:flex-row flex-1 overflow-hidden relative">
+        {/* Zone 1: Far Left ToolBar */}
+        <ToolBar />
+
+        {/* Main Editor Grid Layout */}
+        <div
+          className={`flex-1 overflow-hidden relative ${isMobile ? "flex" : isTablet ? "block" : "grid"}`}
+          style={{
+            gridTemplateColumns:
+              isMobile || isTablet
+                ? undefined
+                : `
+              ${isLeftCollapsed ? "48px" : `${leftWidth}px`}
+              1fr
+              ${isRightCollapsed ? "48px" : `${rightWidth}px`}
+            `,
+          }}
+        >
+          {/* Overlay Backdrop for Mobile/Tablet */}
+          {(isMobile || isTablet) &&
+            (!isLeftCollapsed || !isRightCollapsed) && (
+              <div
+                className="absolute inset-0 bg-background/40 backdrop-blur-[2px] z-30 animate-in fade-in duration-200"
+                onClick={() => {
+                  if (!isLeftCollapsed) toggleLeftCollapse();
+                  if (!isRightCollapsed) toggleRightCollapse();
+                }}
+              />
+            )}
+
+          {/* Left Sidebar - Navigator */}
+          <div
+            className={`relative group h-full z-40 
+              ${isMobile && isLeftCollapsed ? "hidden" : ""} 
+              ${isMobile ? "absolute left-0 w-full top-0 bottom-0 shadow-2xl" : ""}
+              ${isTablet ? "absolute left-0 top-0 bottom-0 shadow-xl transition-transform duration-300 ease-in-out" : ""}
+              ${isTablet && isLeftCollapsed ? "-translate-x-full" : "translate-x-0"}
+            `}
+            style={isTablet ? { width: "260px" } : undefined}
+          >
+            <Sidebar
+              position="left"
+              title={
+                leftSidebarTab.charAt(0).toUpperCase() + leftSidebarTab.slice(1)
+              }
+              icon={
+                leftSidebarTab === "layers" ? (
+                  <Layers size={14} />
+                ) : leftSidebarTab === "assets" ? (
+                  <Box size={14} />
+                ) : (
+                  <Database size={14} />
+                )
+              }
+              width={leftWidth}
+              isCollapsed={isLeftCollapsed}
+              onToggleCollapse={toggleLeftCollapse}
             >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-400 leading-relaxed">
-                {feature.description}
-              </p>
+              <div className="p-1 border-b border-border flex gap-1 bg-background/30 mx-2 mt-2 rounded">
+                <SidebarTab
+                  label="Layers"
+                  active={leftSidebarTab === "layers"}
+                  icon={<Layers size={11} />}
+                  onClick={() => setLeftSidebarTab("layers")}
+                />
+                <SidebarTab
+                  label="Assets"
+                  active={leftSidebarTab === "assets"}
+                  icon={<Box size={11} />}
+                  onClick={() => setLeftSidebarTab("assets")}
+                />
+                <SidebarTab
+                  label="Sections"
+                  active={leftSidebarTab === "sections"}
+                  icon={<Database size={11} />}
+                  onClick={() => setLeftSidebarTab("sections")}
+                />
+              </div>
+              {leftSidebarTab === "layers" && <LayerTree />}
+              {leftSidebarTab === "sections" && <SectionLibrary />}
+              {leftSidebarTab === "assets" && (
+                <div className="p-4 text-center text-[11px] text-text-muted italic">
+                  Coming soon...
+                </div>
+              )}
+            </Sidebar>
+            {!isLeftCollapsed && !isTablet && (
+              <div className="absolute top-0 -right-0.5 bottom-0 z-20">
+                <ResizeHandle
+                  position="right"
+                  onResize={(delta) => {
+                    const currentWidth =
+                      useEditorStore.getState().layout.leftWidth;
+                    setLeftWidth(currentWidth + delta);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Spatial Workspace */}
+          <main
+            ref={mainRef}
+            className="flex-1 h-full relative overflow-hidden flex flex-col bg-background canvas-grid"
+          >
+            <Canvas>
+              <Artboard />
+            </Canvas>
+
+            {/* Floating On-Canvas Zoom Indicator */}
+            <div className="absolute bottom-6 right-6 flex items-center bg-[#1e2229] border border-[#2d313a] rounded-lg p-0.5 shadow-2xl z-50 transition-all hover:scale-105">
+              <div className="px-3 py-1.5 text-[11px] font-bold text-white tracking-widest min-w-12.5 text-center">
+                {Math.round(camera.scale * 100)}%
+              </div>
+              <div className="w-px h-4 bg-[#2d313a] mx-0.5" />
+              <button
+                onClick={handleResetCamera}
+                className="p-1.5 hover:bg-[#2d313a] rounded-md text-gray-400 hover:text-white transition-all"
+                title="Reset Zoom & Pan (Ctrl+0)"
+              >
+                <Maximize size={14} strokeWidth={2.5} />
+              </button>
             </div>
-          ))}
+          </main>
+
+          {/* Right Sidebar - Design */}
+          <div
+            className={`relative group h-full z-40 
+              ${isMobile && isRightCollapsed ? "hidden" : ""} 
+              ${isMobile ? "absolute right-0 w-full top-0 bottom-0 shadow-2xl" : ""}
+              ${isTablet ? "absolute right-0 top-0 bottom-0 shadow-xl transition-transform duration-300 ease-in-out" : ""}
+              ${isTablet && isRightCollapsed ? "translate-x-full" : "translate-x-0"}
+            `}
+            style={isTablet ? { width: "260px" } : undefined}
+          >
+            {!isRightCollapsed && !isTablet && (
+              <div className="absolute top-0 -left-0.5 bottom-0 z-20">
+                <ResizeHandle
+                  position="left"
+                  onResize={(delta) => {
+                    const currentWidth =
+                      useEditorStore.getState().layout.rightWidth;
+                    setRightWidth(currentWidth + delta);
+                  }}
+                />
+              </div>
+            )}
+            <Sidebar
+              position="right"
+              title="Design"
+              icon={<Settings2 size={14} />}
+              width={rightWidth}
+              isCollapsed={isRightCollapsed}
+              onToggleCollapse={toggleRightCollapse}
+            >
+              <div className="shrink-0 p-1 border-b border-border flex gap-1 bg-background/30 mx-2 mt-2 rounded">
+                <SidebarTab
+                  label="Design"
+                  active
+                  icon={<Settings2 size={11} />}
+                />
+                <SidebarTab label="Pages" icon={<Layers size={11} />} />
+              </div>
+              <PropertyInspector />
+            </Sidebar>
+          </div>
         </div>
-      </section>
+      </div>
+
+      <StatusBar />
     </div>
-  )
+  );
 }
+
+const SidebarTab = ({
+  label,
+  active,
+  icon,
+  onClick,
+}: {
+  label: string;
+  active?: boolean;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`
+    flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-bold uppercase tracking-tight rounded transition-all
+    ${active ? "bg-surface text-primary shadow-sm" : "hover:bg-surface/50 text-text-muted hover:text-text-main"}
+  `}
+  >
+    <span>{icon}</span>
+    <span className="hidden sm:inline">{label}</span>
+  </button>
+);

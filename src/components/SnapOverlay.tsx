@@ -1,5 +1,5 @@
 import React from "react";
-import { useEditorStore } from "@/lib/useEditorStore";
+import { useEditorStore, DEVICE_WIDTHS } from "@/lib/useEditorStore";
 import type { SnapLine } from "@/lib/useSnap";
 
 /**
@@ -10,6 +10,8 @@ import type { SnapLine } from "@/lib/useSnap";
 export const SnapOverlay: React.FC = () => {
   const snapLines = useEditorStore((s) => s.snapLines);
   const artboard = useEditorStore((s) => s.artboard);
+  const deviceMode = useEditorStore((s) => s.deviceMode);
+  const artboardWidth = DEVICE_WIDTHS[deviceMode];
 
   if (snapLines.length === 0) return null;
 
@@ -19,7 +21,7 @@ export const SnapOverlay: React.FC = () => {
         <SnapGuide
           key={i}
           line={line}
-          artboardW={artboard.width}
+          artboardW={artboardWidth}
           artboardH={artboard.height}
         />
       ))}
@@ -38,7 +40,7 @@ const SnapGuide: React.FC<{
     const height = Math.max(line.to, artboardH) - top;
     return (
       <div
-        className="absolute pointer-events-none z-[999]"
+        className="absolute pointer-events-none z-999"
         style={{
           left: `${line.position}px`,
           top: `${top}px`,
@@ -56,7 +58,7 @@ const SnapGuide: React.FC<{
   const width = Math.max(line.to, artboardW) - left;
   return (
     <div
-      className="absolute pointer-events-none z-[999]"
+      className="absolute pointer-events-none z-999"
       style={{
         top: `${line.position}px`,
         left: `${left}px`,

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { SnapLine } from './useSnap'
 import { persist } from 'zustand/middleware'
+import type { ProjectImportData } from './importSchema'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,6 @@ interface InteractionState {
 }
 
 interface ArtboardState {
-    width: number
     height: number
     background: string
 }
@@ -126,8 +126,8 @@ interface LayoutState {
 }
 
 interface HistoryState {
-    past: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
-    future: { elements: Record<string, EditorElement>; artboard: ArtboardState }[]
+    past: { elements: Record<string, EditorElement>; rootElements: string[]; artboard: ArtboardState }[]
+    future: { elements: Record<string, EditorElement>; rootElements: string[]; artboard: ArtboardState }[]
 }
 
 interface EditorState {
@@ -142,6 +142,7 @@ interface EditorState {
 
     // Artboard (Physical Page)
     artboard: ArtboardState
+    deviceMode: 'desktop' | 'tablet' | 'mobile'
 
     // Layout (Chrome)
     layout: LayoutState
@@ -184,6 +185,7 @@ interface EditorState {
     setCamera: (camera: Partial<CameraState>) => void
     resetCamera: (containerWidth?: number, containerHeight?: number) => void
     setArtboard: (artboard: Partial<ArtboardState>) => void
+    setDeviceMode: (mode: 'desktop' | 'tablet' | 'mobile') => void
 
     setLeftWidth: (width: number) => void
     setRightWidth: (width: number) => void
@@ -197,9 +199,16 @@ interface EditorState {
     reorderElement: (id: string, newParentId: string | undefined, newIndex: number) => void
     setInsertIndex: (index: number | null) => void
     setHasHydrated: (state: boolean) => void
+    importProject: (data: ProjectImportData) => void
 }
 
 const MAX_HISTORY = 100
+
+export const DEVICE_WIDTHS = {
+    desktop: 1440,
+    tablet: 768,
+    mobile: 390
+} as const;
 
 const INITIAL_ELEMENTS: Record<string, EditorElement> = {}
 
@@ -211,7 +220,8 @@ export const useEditorStore = create<EditorState>()(
             selectedId: null,
 
             camera: { scale: 1, x: 0, y: 0 },
-            artboard: { width: 1440, height: 900, background: '#f9fafb' },
+            artboard: { height: 900, background: '#f9fafb' },
+            deviceMode: 'desktop',
             layout: { leftWidth: 240, rightWidth: 360, isLeftCollapsed: false, isRightCollapsed: false },
             history: { past: [], future: [] },
             theme: 'dark',
@@ -234,8 +244,8 @@ export const useEditorStore = create<EditorState>()(
             setLeftSidebarTab: (tab) => set({ leftSidebarTab: tab }),
 
             saveHistory: () => {
-                const { elements, artboard, history } = get()
-                const snapshot = structuredClone({ elements, artboard })
+                const { elements, rootElements, artboard, history } = get()
+                const snapshot = structuredClone({ elements, rootElements, artboard })
                 const newPast = [...history.past, snapshot]
                 if (newPast.length > MAX_HISTORY) newPast.shift()
                 set({ history: { past: newPast, future: [] } })
@@ -512,10 +522,15 @@ export const useEditorStore = create<EditorState>()(
 
                 const previous = past[past.length - 1]
                 const newPast = past.slice(0, -1)
-                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
+                const current = structuredClone({
+                    elements: get().elements,
+                    rootElements: get().rootElements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: previous.elements,
+                    rootElements: previous.rootElements,
                     artboard: previous.artboard,
                     history: {
                         past: newPast,
@@ -529,10 +544,15 @@ export const useEditorStore = create<EditorState>()(
                 if (!future.length) return
 
                 const [next, ...newFuture] = future
-                const current = structuredClone({ elements: get().elements, artboard: get().artboard })
+                const current = structuredClone({
+                    elements: get().elements,
+                    rootElements: get().rootElements,
+                    artboard: get().artboard
+                })
 
                 set({
                     elements: next.elements,
+                    rootElements: next.rootElements,
                     artboard: next.artboard,
                     history: {
                         past: [...past, current].slice(-MAX_HISTORY),
@@ -545,18 +565,19 @@ export const useEditorStore = create<EditorState>()(
                 set((state) => ({ camera: { ...state.camera, ...camera } })),
 
             resetCamera: (containerWidth, containerHeight) => {
-                const { artboard } = get()
+                const { artboard, deviceMode } = get()
+                const artboardWidth = DEVICE_WIDTHS[deviceMode]
                 if (containerWidth && containerHeight) {
                     const padding = 100
                     const fitScale = Math.min(
                         1,
-                        (containerWidth - padding) / artboard.width,
+                        (containerWidth - padding) / artboardWidth,
                         (containerHeight - padding) / artboard.height
                     )
                     set({
                         camera: {
                             scale: fitScale,
-                            x: (containerWidth - artboard.width * fitScale) / 2,
+                            x: (containerWidth - artboardWidth * fitScale) / 2,
                             y: (containerHeight - artboard.height * fitScale) / 2,
                         }
                     })
@@ -569,6 +590,8 @@ export const useEditorStore = create<EditorState>()(
                 get().saveHistory()
                 set((state) => ({ artboard: { ...state.artboard, ...artboard } }))
             },
+
+            setDeviceMode: (mode) => set({ deviceMode: mode }),
 
             setLeftWidth: (width) =>
                 set((state) => ({
@@ -693,7 +716,19 @@ export const useEditorStore = create<EditorState>()(
                         rootElements: nextRootElements
                     }
                 })
-            }
+            },
+
+            importProject: (data) => {
+                get().saveHistory()
+                set({
+                    elements: data.elements,
+                    rootElements: data.rootElements,
+                    artboard: data.artboard,
+                    selectedId: null,
+                    editingId: null,
+                    interactionState: { mode: 'idle' },
+                })
+            },
         }),
         {
             name: 'editor-storage',
