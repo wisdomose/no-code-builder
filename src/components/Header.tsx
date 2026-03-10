@@ -13,10 +13,13 @@ import {
   Tablet,
   Smartphone,
   MoreVertical,
+  Upload,
+  Download,
 } from "lucide-react";
 import { useEditorStore, DEVICE_WIDTHS } from "@/lib/useEditorStore";
 import { useViewport } from "@/hooks/useViewport";
 import { downloadProjectHtml } from "@/lib/projectHtml";
+import { ImportJsonModal } from "@/components/ImportJsonModal";
 import { toast } from "sonner";
 
 export const Header: React.FC = () => {
@@ -33,6 +36,7 @@ export const Header: React.FC = () => {
   const isMobile = viewport === "mobile";
 
   const [showDeviceMenu, setShowDeviceMenu] = React.useState(false);
+  const [showImportModal, setShowImportModal] = React.useState(false);
 
   const handleExportHtml = () => {
     try {
@@ -41,6 +45,29 @@ export const Header: React.FC = () => {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "HTML export failed.";
+      toast.error(message);
+    }
+  };
+
+  const handleExportJson = () => {
+    try {
+      const { elements, rootElements, artboard } = useEditorStore.getState();
+      const data = JSON.stringify(
+        { elements, rootElements, artboard },
+        null,
+        2,
+      );
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "project.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("JSON exported successfully.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "JSON export failed.";
       toast.error(message);
     }
   };
@@ -172,14 +199,32 @@ export const Header: React.FC = () => {
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <button
-          onClick={handleExportHtml}
-          className="hidden md:flex items-center gap-2 bg-text-main text-surface hover:bg-text-main/90 px-4 py-1.5 text-xs md:text-[13px] md:px-4 rounded-lg font-semibold transition-all shadow-sm"
-          title="Export Code"
-        >
-          <CodeIcon size={14} />
-          Export Code
-        </button>
+        <div className="hidden md:flex items-center gap-1.5">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-1.5 bg-background/50 border border-border hover:bg-surface px-3 py-1.5 text-[12px] rounded-lg font-semibold text-text-muted hover:text-text-main transition-all"
+            title="Import JSON"
+          >
+            <Download size={13} />
+            Import
+          </button>
+          <button
+            onClick={handleExportJson}
+            className="flex items-center gap-1.5 bg-background/50 border border-border hover:bg-surface px-3 py-1.5 text-[12px] rounded-lg font-semibold text-text-muted hover:text-text-main transition-all"
+            title="Export JSON"
+          >
+            <Upload size={13} />
+            Export
+          </button>
+          <button
+            onClick={handleExportHtml}
+            className="flex items-center gap-2 bg-text-main text-surface hover:bg-text-main/90 px-4 py-1.5 text-[13px] rounded-lg font-semibold transition-all shadow-sm"
+            title="Export Code"
+          >
+            <CodeIcon size={14} />
+            Export Code
+          </button>
+        </div>
         {isMobile && (
           <button
             onClick={toggleRightCollapse}
@@ -237,6 +282,10 @@ export const Header: React.FC = () => {
           </button>
         </div>
       )}
+      <ImportJsonModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </header>
   );
 };

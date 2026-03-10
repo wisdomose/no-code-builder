@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { SnapLine } from './useSnap'
 import { persist } from 'zustand/middleware'
+import type { ProjectImportData } from './importSchema'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ interface EditorState {
     reorderElement: (id: string, newParentId: string | undefined, newIndex: number) => void
     setInsertIndex: (index: number | null) => void
     setHasHydrated: (state: boolean) => void
+    importProject: (data: ProjectImportData) => void
 }
 
 const MAX_HISTORY = 100
@@ -714,7 +716,19 @@ export const useEditorStore = create<EditorState>()(
                         rootElements: nextRootElements
                     }
                 })
-            }
+            },
+
+            importProject: (data) => {
+                get().saveHistory()
+                set({
+                    elements: data.elements,
+                    rootElements: data.rootElements,
+                    artboard: data.artboard,
+                    selectedId: null,
+                    editingId: null,
+                    interactionState: { mode: 'idle' },
+                })
+            },
         }),
         {
             name: 'editor-storage',
